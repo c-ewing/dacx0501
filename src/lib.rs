@@ -10,7 +10,6 @@
 
 use core::convert::Infallible;
 use core::fmt;
-use core::ops::Deref;
 
 use embedded_hal::spi::SpiDevice;
 
@@ -26,31 +25,17 @@ use embedded_hal::spi::SpiDevice;
 ///  0   0   0   0   0   1   0   1   TRIGGER     0x05
 ///  0   0   0   0   0   1   1   1   STATUS      0x07
 ///  0   0   0   0   1   0   0   0   DACDATA     0x08
-#[allow(clippy::upper_case_acronyms, dead_code)]
+#[allow(dead_code)]
+#[repr(C)]
 enum Command {
-    NOOP,
-    DEVID,
-    SYNC,
-    CONFIG,
-    GAIN,
-    TRIGGER,
-    STATUS,
-    DACDATA,
-}
-impl Deref for Command {
-    type Target = u8;
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::NOOP => &0x00,
-            Self::DEVID => &0x01,
-            Self::SYNC => &0x02,
-            Self::CONFIG => &0x03,
-            Self::GAIN => &0x04,
-            Self::TRIGGER => &0x05,
-            Self::STATUS => &0x07,
-            Self::DACDATA => &0x08,
-        }
-    }
+    NOOP = 0b0000_0000,
+    DEVID = 0b0000_0001,
+    SYNC = 0b0000_0010,
+    CONFIG = 0b0000_0011,
+    GAIN = 0b0000_0100,
+    TRIGGER = 0b0000_0101,
+    STATUS = 0b0000_0111,
+    DACDATA = 0b0000_1000,
 }
 
 #[derive(Default)]
@@ -204,7 +189,7 @@ macro_rules! Dac {
                 if level as u32 & (1u32 << $bits) > 0 {
                     return Err(DacError::ValueOverflow);
                 }
-                self.data[0] = *Command::DACDATA;
+                self.data[0] = Command::DACDATA as u8;
                 self.data[1..].copy_from_slice(level.to_be_bytes().as_slice());
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
@@ -216,7 +201,7 @@ macro_rules! Dac {
             /// value for the specified DAC
             pub unsafe fn set_output_level_unckecked(&mut self, level: u16) -> Result<(), DacError> {
                 // Data are MSB aligned in straight binary format
-                self.data[0] = *Command::DACDATA;
+                self.data[0] = Command::DACDATA as u8;
                 self.data[1..].copy_from_slice(level.to_be_bytes().as_slice());
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
@@ -238,7 +223,7 @@ macro_rules! Dac {
             /// Set the output voltage of the device without any extra bounds checks
             pub fn set_output_level(&mut self, level: u16) -> Result<(), DacError> {
                 // Data are MSB aligned in straight binary format
-                self.data[0] = *Command::DACDATA;
+                self.data[0] = Command::DACDATA as u8;
                 self.data[1..].copy_from_slice(level.to_be_bytes().as_slice());
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
@@ -280,7 +265,7 @@ macro_rules! Dac {
                 intern_ref: InternRefState,
             ) -> Result<(), DacError> {
                 self.dac_state.config.ref_pwdwn = intern_ref;
-                self.data[0] = *Command::CONFIG;
+                self.data[0] = Command::CONFIG as u8;
                 self.data[1..].copy_from_slice(&self.dac_state.config.to_array());
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
@@ -291,7 +276,7 @@ macro_rules! Dac {
             /// consumption to typically 15 µA at 5 V.
             pub fn set_power_state(&mut self, state: PowerState) -> Result<(), DacError> {
                 self.dac_state.config.dac_pwdwn = state;
-                self.data[0] = *Command::CONFIG;
+                self.data[0] = Command::CONFIG as u8;
                 self.data[1..].copy_from_slice(&self.dac_state.config.to_array());
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
@@ -309,7 +294,7 @@ macro_rules! Dac {
             /// default
             pub fn set_reference_divider(&mut self, ref_div: RefDivState) -> Result<(), DacError> {
                 self.dac_state.gain.ref_div = ref_div;
-                self.data[0] = *Command::GAIN;
+                self.data[0] = Command::GAIN as u8;
                 self.data[1..].copy_from_slice(&self.dac_state.gain.to_array());
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
@@ -321,7 +306,7 @@ macro_rules! Dac {
             /// output gain is set to `TwoX` by default
             pub fn set_output_gain(&mut self, gain: GainState) -> Result<(), DacError> {
                 self.dac_state.gain.buff_gain = gain;
-                self.data[0] = *Command::GAIN;
+                self.data[0] = Command::GAIN as u8;
                 self.data[1..].copy_from_slice(&self.dac_state.gain.to_array());
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
@@ -338,7 +323,7 @@ macro_rules! Dac {
             /// outputs are all zero volts. The DAC codes are unaffected, and the DAC output returns to
             /// normal when the difference is above the analog threshold.
             pub fn ref_alarm_status(&mut self) -> Result<AlarmStatus, DacError> {
-                self.data[0] = *Command::STATUS;
+                self.data[0] = Command::STATUS as u8;
                 self.data[1] = 0;
                 self.data[2] = 0;
                 self.spi.read(&mut self.data).map_err(DacError::from)?;
