@@ -178,8 +178,8 @@ impl fmt::Display for DacError {
         }
     }
 }
-impl From<&dyn embedded_hal::spi::Error> for DacError {
-    fn from(_: &dyn embedded_hal::spi::Error) -> Self {
+impl From<embedded_hal::spi::ErrorKind> for DacError {
+    fn from(_: embedded_hal::spi::ErrorKind) -> Self {
         DacError::SpiError
     }
 }
