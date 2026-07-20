@@ -13,9 +13,8 @@ use core::fmt;
 
 use embedded_hal::spi::SpiDevice;
 
-/// The command byte. This should be set as the first byte of the transfer to the DAC
+/// Command byte, first byte of the transfer to the DAC
 ///
-///  DC  DC  DC  DC
 /// B23 B22 B21 B20 B19 B18 B17 B16 REGISTER     HEX
 ///  0   0   0   0   0   0   0   0   NOOP        0x00
 ///  0   0   0   0   0   0   0   1   DEVID       0x01
@@ -46,30 +45,30 @@ struct DacState {
 
 #[derive(Default)]
 struct DacConfig {
-    ref_pwdwn: InternRefState,
+    ref_pwdwn: InternalReference,
     dac_pwdwn: PowerState,
 }
 impl DacConfig {
     fn to_array(&self) -> [u8; 2] {
         [
             // When set to 1, this bit disables the device internal reference.
-            matches!(self.ref_pwdwn, InternRefState::Disable) as u8,
+            matches!(self.ref_pwdwn, InternalReference::Disabled) as u8,
             // When set to 1, the DAC in power-down mode and the DAC output is connected to GND
             // through a 1-kΩ internal resistor.
-            matches!(self.dac_pwdwn, PowerState::Off) as u8,
+            matches!(self.dac_pwdwn, PowerState::Down) as u8,
         ]
     }
 }
 
 struct GainConfig {
-    ref_div: RefDivState,
-    buff_gain: GainState,
+    ref_div: ReferenceDivider,
+    buff_gain: BufferGain,
 }
 impl Default for GainConfig {
     fn default() -> Self {
         Self {
-            ref_div: RefDivState::OneX,
-            buff_gain: GainState::TwoX,
+            ref_div: ReferenceDivider::None,
+            buff_gain: BufferGain::Two,
         }
     }
 }
@@ -77,19 +76,20 @@ impl GainConfig {
     fn to_array(&self) -> [u8; 2] {
         [
             // When REF-DIV set to 1, the reference voltage is internally divided by a factor of 2.
-            matches!(self.ref_div, RefDivState::Half) as u8,
+            matches!(self.ref_div, ReferenceDivider::Two) as u8,
             // When set to 1, the buffer amplifier for corresponding DAC has a gain of 2.
-            matches!(self.buff_gain, GainState::TwoX) as u8,
+            matches!(self.buff_gain, BufferGain::Two) as u8,
         ]
     }
 }
 
-/// The state of the dac output. The device default is [`PowerState::On`]
+/// DAC power state. When powered down the DAC output is connected to ground through a 1k resistor.
+/// The device default is [`PowerState::On`]
 pub enum PowerState {
-    /// Normal device voltage output
+    /// Normal operation
     On,
-    /// The device output is connected to ground through a resistor
-    Off,
+    /// Power down, output connected to ground
+    Down,
 }
 impl Default for PowerState {
     fn default() -> Self {
@@ -97,54 +97,57 @@ impl Default for PowerState {
     }
 }
 
-/// The state of the dac gain. The device default is [`GainState::TwoX`]
-pub enum GainState {
-    /// The output voltage of the device is increased by a factor of two
-    TwoX,
-    /// The output voltage of the device is kept normal
-    OneX,
+/// Output buffer gain.
+/// Power on value is [`BufferGain::Two`]
+pub enum BufferGain {
+    /// The output voltage of the device is [0 .. VREF]
+    None,
+    /// The output voltage of the device is [0 .. 2*VREF]
+    Two,
 }
-impl Default for GainState {
+impl Default for BufferGain {
     fn default() -> Self {
-        Self::TwoX
+        Self::Two
     }
 }
 
-/// The state of the DAC reference divider which applies to both the internal and external
-/// reference. The device default is [`RefDivState::OneX`]
-pub enum RefDivState {
-    /// The reference voltage is divided by a factor of 2
-    Half,
+/// DAC reference divider which applies to both internal and external reference sources.
+/// Power on value is [`ReferenceDivider::None`]
+pub enum ReferenceDivider {
     /// The reference voltage is not modified
-    OneX,
+    None,
+    /// The reference voltage is divided by 2
+    Two,
 }
-impl Default for RefDivState {
+impl Default for ReferenceDivider {
     fn default() -> Self {
-        Self::OneX
+        Self::None
     }
 }
 
-/// The state of the DAC internal Reference. The device default is [`InternRefState::Enable`]
-pub enum InternRefState {
-    /// The device internal reference is disabled
-    Disable,
+/// Status of the internal reference.
+/// Power on value is [`InternRefState::Enable`]
+pub enum InternalReference {
     /// The device internal reference is enabled
-    Enable,
+    Enabled,
+    /// The device internal reference is disabled. External reference must be provided.
+    Disabled,
 }
-impl Default for InternRefState {
+impl Default for InternalReference {
     fn default() -> Self {
-        Self::Enable
+        Self::Enabled
     }
 }
 
 #[derive(PartialEq, Eq)]
-/// The state of the DAC alarm  The device default is [`AlarmStatus::Low`]
+/// Alarm when supply voltage is below what is required to power the internal reference and gain buffer. DAC outputs 0 volts while supply is too low.
+/// Upon supply exceeding the analog threshold DAC output returns to normal operation with the output code uneffected.
+/// Power on value is [`AlarmStatus::Normal`]
 pub enum AlarmStatus {
-    /// The device alarm status indicating that there is not enough headroom between Vdd and
-    /// the reference.
-    High,
-    /// The device alarm status indicating normal operation
-    Low,
+    /// Not enough headroom, reference buffer shutdown. DAC outputs 0 volts.
+    Alarm,
+    /// Normal operation
+    Normal,
 }
 
 #[derive(Debug)]
@@ -262,7 +265,7 @@ macro_rules! Dac {
             /// Enables and disables the device internal reference. The internal reference is on by default
             pub fn set_internal_reference(
                 &mut self,
-                intern_ref: InternRefState,
+                intern_ref: InternalReference,
             ) -> Result<(), DacError> {
                 self.dac_state.config.ref_pwdwn = intern_ref;
                 self.data[0] = Command::CONFIG as u8;
@@ -292,7 +295,7 @@ macro_rules! Dac {
             /// divider is configured correctly. When the reference divider is set to `Half`, the reference
             /// voltage is internally divided by a factor of 2. The reference divider is set to `OneX` by
             /// default
-            pub fn set_reference_divider(&mut self, ref_div: RefDivState) -> Result<(), DacError> {
+            pub fn set_reference_divider(&mut self, ref_div: ReferenceDivider) -> Result<(), DacError> {
                 self.dac_state.gain.ref_div = ref_div;
                 self.data[0] = Command::GAIN as u8;
                 self.data[1..].copy_from_slice(&self.dac_state.gain.to_array());
@@ -304,7 +307,7 @@ macro_rules! Dac {
             /// voltage output. When set to `OneX` it has a gain of 1x. Using this gain can be
             /// especially useful when using the internal reference divider set to `Half`. The
             /// output gain is set to `TwoX` by default
-            pub fn set_output_gain(&mut self, gain: GainState) -> Result<(), DacError> {
+            pub fn set_output_gain(&mut self, gain: BufferGain) -> Result<(), DacError> {
                 self.dac_state.gain.buff_gain = gain;
                 self.data[0] = Command::GAIN as u8;
                 self.data[1..].copy_from_slice(&self.dac_state.gain.to_array());
@@ -328,9 +331,9 @@ macro_rules! Dac {
                 self.data[2] = 0;
                 self.spi.read(&mut self.data).map_err(DacError::from)?;
                 if self.data[2] == 1 {
-                    Ok(AlarmStatus::High)
+                    Ok(AlarmStatus::Alarm)
                 } else {
-                    Ok(AlarmStatus::Low)
+                    Ok(AlarmStatus::Normal)
                 }
             }
         }

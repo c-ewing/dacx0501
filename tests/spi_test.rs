@@ -1,10 +1,10 @@
 use std::assert_matches;
 use std::u16;
 
-use dacx0501::GainState;
-use dacx0501::InternRefState;
+use dacx0501::BufferGain;
+use dacx0501::InternalReference;
 use dacx0501::PowerState;
-use dacx0501::RefDivState;
+use dacx0501::ReferenceDivider;
 use dacx0501::{self};
 use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 
@@ -81,10 +81,10 @@ fn set_reference() {
     ];
     let mut spi = SpiMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new(&mut spi);
-    d12.set_internal_reference(InternRefState::Enable)
+    d12.set_internal_reference(InternalReference::Enabled)
         .expect("Shouldn't panic on turning reference on");
 
-    d12.set_internal_reference(InternRefState::Disable)
+    d12.set_internal_reference(InternalReference::Disabled)
         .expect("Shouldn't panic on turning reference off");
 
     spi.done();
@@ -105,7 +105,7 @@ fn set_powerdown() {
     d12.set_power_state(PowerState::On)
         .expect("Shouldn't panic on turning dac on");
 
-    d12.set_power_state(PowerState::Off)
+    d12.set_power_state(PowerState::Down)
         .expect("Shouldn't panic on turning dac off");
 
     spi.done();
@@ -125,10 +125,10 @@ fn set_reference_divider() {
     ];
     let mut spi = SpiMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new(&mut spi);
-    d12.set_reference_divider(RefDivState::OneX)
+    d12.set_reference_divider(ReferenceDivider::None)
         .expect("Shouldn't panic on changing reference divider");
 
-    d12.set_reference_divider(RefDivState::Half)
+    d12.set_reference_divider(ReferenceDivider::Two)
         .expect("Shouldn't panic on changing reference divider");
 
     spi.done();
@@ -147,10 +147,10 @@ fn set_buffer_gain() {
     ];
     let mut spi = SpiMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new(&mut spi);
-    d12.set_output_gain(GainState::OneX)
+    d12.set_output_gain(BufferGain::None)
         .expect("Shouldn't panic on changing buffer gain");
 
-    d12.set_output_gain(GainState::TwoX)
+    d12.set_output_gain(BufferGain::Two)
         .expect("Shouldn't panic on changing buffer gain");
 
     spi.done();
