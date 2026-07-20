@@ -12,7 +12,7 @@ use core::convert::Infallible;
 use core::fmt;
 use core::ops::Deref;
 
-use embedded_hal::spi;
+use embedded_hal::spi::SpiDevice;
 
 /// The command byte. This should be set as the first byte of the transfer to the DAC
 ///
@@ -193,11 +193,10 @@ impl From<Infallible> for DacError {
 macro_rules! Dac {
     ($(#[$meta:meta])* $Name:ident, $bits:expr) => {
 
-        impl<Spi> $Name<Spi>
+        impl<SPI> $Name<SPI>
         where
-            Spi: spi::blocking::SpiDevice,
-            Spi::Bus: spi::blocking::SpiBusWrite,
-            DacError: core::convert::From<<Spi as embedded_hal::spi::ErrorType>::Error>,
+            SPI: SpiDevice,
+            DacError: core::convert::From<<SPI as embedded_hal::spi::ErrorType>::Error>,
         {
             /// Set the output voltage of the device and check the level bounds for the specified device
             pub fn set_output_level(&mut self, level: u16) -> Result<(), DacError> {
@@ -231,11 +230,10 @@ macro_rules! Dac {
 
     ($(#[$meta:meta])* $Name:ident) => {
 
-        impl<Spi> $Name<Spi>
+        impl<SPI> $Name<SPI>
         where
-            Spi: spi::blocking::SpiDevice,
-            Spi::Bus: spi::blocking::SpiBusWrite,
-            DacError: core::convert::From<<Spi as embedded_hal::spi::ErrorType>::Error>,
+            SPI: SpiDevice,
+            DacError: core::convert::From<<SPI as embedded_hal::spi::ErrorType>::Error>,
         {
             /// Set the output voltage of the device without any extra bounds checks
             pub fn set_output_level(&mut self, level: u16) -> Result<(), DacError> {
@@ -254,21 +252,20 @@ macro_rules! Dac {
     ($(#[$meta:meta])* $Name:ident :! $DC:ident) => {
 
         $(#[$meta])*
-        pub struct $Name<Spi> {
-            spi: Spi,
+        pub struct $Name<SPI> {
+            spi: SPI,
             data: [u8; 3],
             dac_state: DacState,
         }
 
-        impl<Spi> $Name<Spi>
+        impl<SPI> $Name<SPI>
         where
-            Spi: spi::blocking::SpiDevice,
-            Spi::Bus: spi::blocking::SpiBusWrite,
-            DacError: core::convert::From<<Spi as embedded_hal::spi::ErrorType>::Error>,
+            SPI: SpiDevice,
+            DacError: core::convert::From<<SPI as embedded_hal::spi::ErrorType>::Error>,
         {
             /// Creates a new instance of the specified dac with the internal state set to match
             /// the device defaults
-            pub fn new(spi: Spi) -> Self {
+            pub fn new(spi: SPI) -> Self {
                 Self {
                     spi,
                     data: [0, 0, 0],
@@ -331,11 +328,10 @@ macro_rules! Dac {
             }
         }
 
-        impl<Spi> $Name<Spi>
+        impl<SPI> $Name<SPI>
         where
-            Spi: spi::blocking::SpiDevice,
-            Spi::Bus: spi::blocking::SpiBusRead,
-            DacError: core::convert::From<<Spi as embedded_hal::spi::ErrorType>::Error>,
+            SPI: SpiDevice,
+            DacError: core::convert::From<<SPI as embedded_hal::spi::ErrorType>::Error>,
         {
             /// `AlarmStatus` is `High` when the difference between the reference and supply pins is below a minimum
             /// analog threshold. The status is `Low` otherwise. When `High`, the reference buffer is shut down, and the DAC
