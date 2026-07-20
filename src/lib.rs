@@ -37,54 +37,20 @@ enum Command {
     DACDATA = 0b0000_1000,
 }
 
+/// DAC Configuration
+// TODO: Document
 #[derive(Default)]
-struct DacState {
-    config: DacConfig,
-    gain: GainConfig,
-}
-
-#[derive(Default)]
-struct DacConfig {
-    ref_pwdwn: InternalReference,
-    dac_pwdwn: PowerState,
-}
-impl DacConfig {
-    fn to_array(&self) -> [u8; 2] {
-        [
-            // When set to 1, this bit disables the device internal reference.
-            matches!(self.ref_pwdwn, InternalReference::Disabled) as u8,
-            // When set to 1, the DAC in power-down mode and the DAC output is connected to GND
-            // through a 1-kΩ internal resistor.
-            matches!(self.dac_pwdwn, PowerState::Down) as u8,
-        ]
-    }
-}
-
-struct GainConfig {
-    ref_div: ReferenceDivider,
-    buff_gain: BufferGain,
-}
-impl Default for GainConfig {
-    fn default() -> Self {
-        Self {
-            ref_div: ReferenceDivider::None,
-            buff_gain: BufferGain::Two,
-        }
-    }
-}
-impl GainConfig {
-    fn to_array(&self) -> [u8; 2] {
-        [
-            // When REF-DIV set to 1, the reference voltage is internally divided by a factor of 2.
-            matches!(self.ref_div, ReferenceDivider::Two) as u8,
-            // When set to 1, the buffer amplifier for corresponding DAC has a gain of 2.
-            matches!(self.buff_gain, BufferGain::Two) as u8,
-        ]
-    }
+struct DACConfig {
+    dac_power: PowerState,
+    ref_power: InternalReference,
+    ref_divider: ReferenceDivider,
+    buffer_gain: BufferGain,
+    _dac_code: u16,
 }
 
 /// DAC power state. When powered down the DAC output is connected to ground through a 1k resistor.
 /// The device default is [`PowerState::On`]
+#[derive(Clone, Copy)]
 pub enum PowerState {
     /// Normal operation
     On,
@@ -99,6 +65,7 @@ impl Default for PowerState {
 
 /// Output buffer gain.
 /// Power on value is [`BufferGain::Two`]
+#[derive(Clone, Copy)]
 pub enum BufferGain {
     /// The output voltage of the device is [0 .. VREF]
     None,
@@ -113,6 +80,7 @@ impl Default for BufferGain {
 
 /// DAC reference divider which applies to both internal and external reference sources.
 /// Power on value is [`ReferenceDivider::None`]
+#[derive(Clone, Copy)]
 pub enum ReferenceDivider {
     /// The reference voltage is not modified
     None,
@@ -126,7 +94,8 @@ impl Default for ReferenceDivider {
 }
 
 /// Status of the internal reference.
-/// Power on value is [`InternRefState::Enable`]
+/// Power on value is [`InternalReference::Enabled`]
+#[derive(Clone, Copy)]
 pub enum InternalReference {
     /// The device internal reference is enabled
     Enabled,
@@ -139,7 +108,7 @@ impl Default for InternalReference {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 /// Alarm when supply voltage is below what is required to power the internal reference and gain buffer. DAC outputs 0 volts while supply is too low.
 /// Upon supply exceeding the analog threshold DAC output returns to normal operation with the output code uneffected.
 /// Power on value is [`AlarmStatus::Normal`]
@@ -243,7 +212,7 @@ macro_rules! Dac {
         pub struct $Name<SPI> {
             spi: SPI,
             data: [u8; 3],
-            dac_state: DacState,
+            dac_config: DACConfig,
         }
 
         impl<SPI> $Name<SPI>
@@ -257,7 +226,7 @@ macro_rules! Dac {
                 Self {
                     spi,
                     data: [0, 0, 0],
-                    dac_state: DacState::default(),
+                    dac_config: DACConfig::default(),
                 }
             }
 
@@ -267,9 +236,10 @@ macro_rules! Dac {
                 &mut self,
                 intern_ref: InternalReference,
             ) -> Result<(), DacError> {
-                self.dac_state.config.ref_pwdwn = intern_ref;
+                self.dac_config.ref_power = intern_ref;
                 self.data[0] = Command::CONFIG as u8;
-                self.data[1..].copy_from_slice(&self.dac_state.config.to_array());
+                self.data[1] = self.dac_config.ref_power as u8;
+                self.data[2] = self.dac_config.dac_power as u8;
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
             }
@@ -278,9 +248,10 @@ macro_rules! Dac {
             /// resistor. The device is in power `On` state by default. This reduces current
             /// consumption to typically 15 µA at 5 V.
             pub fn set_power_state(&mut self, state: PowerState) -> Result<(), DacError> {
-                self.dac_state.config.dac_pwdwn = state;
+                self.dac_config.dac_power = state;
                 self.data[0] = Command::CONFIG as u8;
-                self.data[1..].copy_from_slice(&self.dac_state.config.to_array());
+                self.data[1] = self.dac_config.ref_power as u8;
+                self.data[2] = self.dac_config.dac_power as u8;
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
             }
@@ -296,9 +267,10 @@ macro_rules! Dac {
             /// voltage is internally divided by a factor of 2. The reference divider is set to `OneX` by
             /// default
             pub fn set_reference_divider(&mut self, ref_div: ReferenceDivider) -> Result<(), DacError> {
-                self.dac_state.gain.ref_div = ref_div;
+                self.dac_config.ref_divider = ref_div;
                 self.data[0] = Command::GAIN as u8;
-                self.data[1..].copy_from_slice(&self.dac_state.gain.to_array());
+                self.data[1] = self.dac_config.ref_divider as u8;
+                self.data[2] = self.dac_config.buffer_gain as u8;
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
             }
@@ -308,9 +280,10 @@ macro_rules! Dac {
             /// especially useful when using the internal reference divider set to `Half`. The
             /// output gain is set to `TwoX` by default
             pub fn set_output_gain(&mut self, gain: BufferGain) -> Result<(), DacError> {
-                self.dac_state.gain.buff_gain = gain;
+                self.dac_config.buffer_gain = gain;
                 self.data[0] = Command::GAIN as u8;
-                self.data[1..].copy_from_slice(&self.dac_state.gain.to_array());
+                self.data[1] = self.dac_config.ref_divider as u8;
+                self.data[2] = self.dac_config.buffer_gain as u8;
                 self.spi.write(&self.data).map_err(DacError::from)?;
                 Ok(())
             }
