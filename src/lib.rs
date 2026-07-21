@@ -108,6 +108,22 @@ impl Default for InternalReference {
     }
 }
 
+/// Synchronous (triggered), or asynchronous (continuous) output of a value loaded into the DACDATA register.
+/// Synchronous output is triggered by writing to the LDAC bit of the trigger register.
+/// Power on value is [`Mode::Asynchronous`]
+#[derive(Clone, Copy)]
+pub enum Mode {
+    /// The device internal reference is enabled
+    Asynchronous,
+    /// The device internal reference is disabled. External reference must be provided.
+    Synchronous,
+}
+impl Default for Mode {
+    fn default() -> Self {
+        Self::Asynchronous
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy)]
 /// Alarm when supply voltage is below what is required to power the internal reference and gain buffer. DAC outputs 0 volts while supply is too low.
 /// Upon supply exceeding the analog threshold DAC output returns to normal operation with the output code uneffected.
@@ -215,6 +231,17 @@ macro_rules! Dac {
             /// Get DAC resolution in bits
             pub fn get_resolution(&mut self) -> Result<u8, DacError> {
                 unimplemented!("SPI cannot read device registers");
+            }
+
+            /// Get whether the DAC is triggered by load DAC or if it is set to update immediately
+            pub fn get_synchronous(&mut self) -> Result<bool, DacError>{
+                unimplemented!("SPI cannot read device registers");
+            }
+
+            /// Set whether the DAC is triggered by load DAC or if it is set to update immediately
+            pub fn set_synchronous(&mut self, mode: Mode) -> Result<(), DacError> {
+                self.spi.write(&[Command::SYNC as u8, 0x00, mode as u8]).map_err(DacError::from)?;
+                Ok(())
             }
 
 

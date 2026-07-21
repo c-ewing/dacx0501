@@ -3,6 +3,7 @@ use std::u16;
 
 use dacx0501::BufferGain;
 use dacx0501::InternalReference;
+use dacx0501::Mode;
 use dacx0501::PowerState;
 use dacx0501::ReferenceDivider;
 use dacx0501::{self};
@@ -66,17 +67,36 @@ fn read_resolution() {
 
 // Sync Register
 #[test]
+#[should_panic]
+fn read_sync() {
+    let expectations = [];
+    let mut spi = SpiMock::new(&expectations);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+
+    // Unimplemented for SPI
+    let _ = d12.get_synchronous();
+
+    spi.done();
+}
+
+#[test]
 fn set_sync() {
     let expectations = [
         SpiTransaction::transaction_start(),
         SpiTransaction::write_vec(vec![0x02, 0x00, 0x00]),
         SpiTransaction::transaction_end(),
+        SpiTransaction::transaction_start(),
+        SpiTransaction::write_vec(vec![0x02, 0x00, 0x01]),
+        SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let _d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
 
-    // FIXME:
-    unimplemented!("Enabling sync not supported");
+    d12.set_synchronous(Mode::Asynchronous)
+        .expect("Should not panic setting async");
+    d12.set_synchronous(Mode::Synchronous)
+        .expect("Should not panic setting sync");
+    spi.done();
 }
 
 // Config Register
