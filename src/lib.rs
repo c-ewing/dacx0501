@@ -180,27 +180,6 @@ macro_rules! Dac {
         }
 
         Dac!($(#[$meta])* $Name :! dc);
-
-    };
-
-    ($(#[$meta:meta])* $Name:ident) => {
-
-        impl<SPI> $Name<SPI>
-        where
-            SPI: SpiDevice,
-            DacError: core::convert::From<<SPI as embedded_hal::spi::ErrorType>::Error>,
-        {
-            /// Set the output voltage of the device without any extra bounds checks
-            pub fn set_output_level(&mut self, level: u16) -> Result<(), DacError> {
-                // Data are MSB aligned in straight binary format
-                let bytes = level.to_be_bytes();
-                self.spi.write(&[Command::DACDATA as u8, bytes[0], bytes[1]]).map_err(DacError::from)?;
-                Ok(())
-            }
-        }
-
-        Dac!($(#[$meta])* $Name :! dc);
-
     };
 
     ($(#[$meta:meta])* $Name:ident :! $DC:ident) => {
@@ -290,15 +269,13 @@ macro_rules! Dac {
 
 Dac!(
     /// A 16 bit DAC
-    Dac80501
+    Dac80501, 16
 );
 Dac!(
     /// A 14 bit DAC
-    Dac70501,
-    14
+    Dac70501, 14
 );
 Dac!(
     /// A 12 bit DAC
-    Dac60501,
-    12
+    Dac60501, 12
 );
