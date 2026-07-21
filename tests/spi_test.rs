@@ -51,7 +51,18 @@ fn set_noop() {
 }
 
 // DEVID Register
-// TODO: SPI does not support reads
+#[test]
+#[should_panic]
+fn read_resolution() {
+    let expectations = [];
+    let mut spi = SpiMock::new(&expectations);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+
+    // Unimplemented for SPI
+    let _ = d12.get_resolution();
+
+    spi.done();
+}
 
 // Sync Register
 #[test]

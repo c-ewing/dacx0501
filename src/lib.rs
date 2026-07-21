@@ -212,6 +212,12 @@ macro_rules! Dac {
                 Ok(())
             }
 
+            /// Get DAC resolution in bits
+            pub fn get_resolution(&mut self) -> Result<u8, DacError> {
+                unimplemented!("SPI cannot read device registers");
+            }
+
+
             /// Enables and disables the device internal reference. The internal reference is on by default
             pub fn set_internal_reference(
                 &mut self,
