@@ -1,7 +1,9 @@
 
 # DACx0501
 
-Forked from https://github.com/jrmoulton/dacx0501
+[![crates.io](https://img.shields.io/crates/d/dacx0501.svg)](https://crates.io/crates/dacx0501)
+[![crates.io](https://img.shields.io/crates/v/dacx0501.svg)](https://crates.io/crates/dacx0501)
+[![Documentation](https://docs.rs/dacx0501/badge.svg)](https://docs.rs/dacx0501)
 
 An embedded-hal DAC Driver
 
