@@ -332,7 +332,7 @@ fn set_output_max() {
 fn set_output_mid_scale() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x08, 0x08, 0x00]),
+        SpiTransaction::write_vec(vec![0x08, 0x80, 0x00]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);

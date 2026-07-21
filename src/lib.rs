@@ -171,6 +171,10 @@ macro_rules! Dac {
             SPI: SpiDevice,
             DacError: core::convert::From<<SPI as embedded_hal::spi::ErrorType>::Error>,
         {
+            /// Width of the DACDATA shift register, in bits. Fixed by the hardware
+            /// regardless of the DAC resolution. 12 and 14 bit DACs left justify output code within this register.
+            const REGISTER_WIDTH: u8 = 16;
+
             /// Set the output voltage of the device and check the level bounds for the specified device
             pub fn set_output_level(&mut self, level: u16) -> Result<(), DacError> {
                 // Shifts to ensure level is not out of range for the number of bits the DAC has.
@@ -179,7 +183,7 @@ macro_rules! Dac {
                     return Err(DacError::ValueOverflow);
                 }
 
-                let bytes = level.to_be_bytes();
+                let bytes = (level << (Self::REGISTER_WIDTH - $bits)).to_be_bytes();
                 self.spi.write(&[Command::DACDATA as u8, bytes[0], bytes[1]]).map_err(DacError::from)?;
                 Ok(())
             }
@@ -189,8 +193,7 @@ macro_rules! Dac {
             /// This function sets the output level without checking the bounds on the size of the
             /// value for the specified DAC
             pub unsafe fn set_output_level_unchecked(&mut self, level: u16) -> Result<(), DacError> {
-                // Data are MSB aligned in straight binary format
-                let bytes = level.to_be_bytes();
+                let bytes = (level << (Self::REGISTER_WIDTH - $bits)).to_be_bytes();
                 self.spi.write(&[Command::DACDATA as u8, bytes[0], bytes[1]]).map_err(DacError::from)?;
                 Ok(())
             }
