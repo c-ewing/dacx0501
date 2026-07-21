@@ -228,12 +228,12 @@ macro_rules! Dac {
                 Ok(())
             }
 
-            /// Get DAC resolution in bits
+            /// UNIMPLEMENTED: Get DAC resolution in bits
             pub fn get_resolution(&mut self) -> Result<u8, DacError> {
                 unimplemented!("SPI cannot read device registers");
             }
 
-            /// Get whether the DAC is triggered by load DAC or if it is set to update immediately
+            /// UNIMPLEMENTED: Get whether the DAC is triggered by load DAC or if it is set to update immediately
             pub fn get_synchronous(&mut self) -> Result<bool, DacError>{
                 unimplemented!("SPI cannot read device registers");
             }
@@ -244,7 +244,7 @@ macro_rules! Dac {
                 Ok(())
             }
 
-            /// Get internal reference state
+            /// UNIMPLEMENTED: Get internal reference state
             pub fn get_internal_reference(&mut self) -> Result<InternalReference, DacError> {
                 unimplemented!("SPI cannot read device registers");
             }
@@ -259,7 +259,7 @@ macro_rules! Dac {
                 Ok(())
             }
 
-            /// Get device power state
+            /// UNIMPLEMENTED: Get device power state
             pub fn get_power_state(&mut self) -> Result<PowerState, DacError> {
                 unimplemented!("SPI cannot read device registers");
             }
@@ -271,6 +271,11 @@ macro_rules! Dac {
                 self.dac_config.dac_power = state;
                 self.spi.write(&[Command::CONFIG as u8, self.dac_config.ref_power as u8, self.dac_config.dac_power as u8]).map_err(DacError::from)?;
                 Ok(())
+            }
+
+            /// UNIMPLEMENTED: Get reference divider state
+            pub fn get_reference_divider(&mut self) -> Result<ReferenceDivider, DacError>{
+                unimplemented!("SPI cannot read device registers");
             }
 
             /// The reference voltage to the device (either from the internal or external reference) can be
@@ -289,6 +294,11 @@ macro_rules! Dac {
                 Ok(())
             }
 
+            /// UNIMPLEMENTED: Get output gain state
+            pub fn get_output_gain(&mut self) -> Result<BufferGain, DacError>{
+                unimplemented!("SPI cannot read device registers");
+            }
+
             /// When set to `TwoX`, the buffer amplifier for the DAC has a gain of 2x doubling the
             /// voltage output. When set to `OneX` it has a gain of 1x. Using this gain can be
             /// especially useful when using the internal reference divider set to `Half`. The
@@ -299,6 +309,7 @@ macro_rules! Dac {
                 Ok(())
             }
 
+            /// UNIMPLEMENTED:
             /// `AlarmStatus` is `High` when the difference between the reference and supply pins is below a minimum
             /// analog threshold. The status is `Low` otherwise. When `High`, the reference buffer is shut down, and the DAC
             /// outputs are all zero volts. The DAC codes are unaffected, and the DAC output returns to
