@@ -157,10 +157,12 @@ macro_rules! Dac {
         {
             /// Set the output voltage of the device and check the level bounds for the specified device
             pub fn set_output_level(&mut self, level: u16) -> Result<(), DacError> {
-                // Data are MSB aligned in straight binary format
-                if level as u32 & (1u32 << $bits) > 0 {
+                // Shifts to ensure level is not out of range for the number of bits the DAC has.
+                // Check should be optimized out in the case of a 16bit DAC
+                if level.checked_shr($bits).unwrap_or(0) != 0 {
                     return Err(DacError::ValueOverflow);
                 }
+
                 let bytes = level.to_be_bytes();
                 self.spi.write(&[Command::DACDATA as u8, bytes[0], bytes[1]]).map_err(DacError::from)?;
                 Ok(())

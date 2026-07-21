@@ -220,6 +220,21 @@ fn set_output_max_err() {
 }
 
 #[test]
+fn set_output_max() {
+    let expectations = [
+        SpiTransaction::transaction_start(),
+        SpiTransaction::write_vec(vec![0x08, 0xFF, 0xFF]),
+        SpiTransaction::transaction_end(),
+    ];
+    let mut spi = SpiMock::new(&expectations);
+    let mut d16 = dacx0501::Dac80501::new(&mut spi);
+
+    assert_matches!(d16.set_output_level(u16::MAX), Ok(()));
+
+    spi.done();
+}
+
+#[test]
 fn set_output_mid_scale() {
     let expectations = [
         SpiTransaction::transaction_start(),
