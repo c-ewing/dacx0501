@@ -270,7 +270,18 @@ fn set_soft_reset() {
 }
 
 // STATUS Register
-// TODO: SPI does not support reads
+#[test]
+#[should_panic]
+fn read_alarm() {
+    let expectations = [];
+    let mut spi = SpiMock::new(&expectations);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+
+    // Unimplemented for SPI
+    let _ = d12.ref_alarm_status();
+
+    spi.done();
+}
 
 // DAC Register
 #[test]
@@ -329,19 +340,6 @@ fn set_output_mid_scale() {
 
     d12.set_output_level(2048)
         .expect("Setting to mid scale should not panic");
-
-    spi.done();
-}
-
-#[test]
-#[should_panic]
-fn read_alarm() {
-    let expectations = [];
-    let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
-
-    // Unimplemented for SPI
-    let _ = d12.ref_alarm_status();
 
     spi.done();
 }
