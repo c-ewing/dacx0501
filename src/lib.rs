@@ -256,13 +256,7 @@ macro_rules! Dac {
                 self.spi.write(&[Command::GAIN as u8, self.dac_config.ref_divider as u8, self.dac_config.buffer_gain as u8]).map_err(DacError::from)?;
                 Ok(())
             }
-        }
 
-        impl<SPI> $Name<SPI>
-        where
-            SPI: SpiDevice,
-            DacError: core::convert::From<<SPI as embedded_hal::spi::ErrorType>::Error>,
-        {
             /// `AlarmStatus` is `High` when the difference between the reference and supply pins is below a minimum
             /// analog threshold. The status is `Low` otherwise. When `High`, the reference buffer is shut down, and the DAC
             /// outputs are all zero volts. The DAC codes are unaffected, and the DAC output returns to
