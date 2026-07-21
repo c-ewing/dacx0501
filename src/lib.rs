@@ -299,15 +299,7 @@ macro_rules! Dac {
             /// outputs are all zero volts. The DAC codes are unaffected, and the DAC output returns to
             /// normal when the difference is above the analog threshold.
             pub fn ref_alarm_status(&mut self) -> Result<AlarmStatus, DacError> {
-                self.data[0] = Command::STATUS as u8;
-                self.data[1] = 0;
-                self.data[2] = 0;
-                self.spi.read(&mut self.data).map_err(DacError::from)?;
-                if self.data[2] == 1 {
-                    Ok(AlarmStatus::Alarm)
-                } else {
-                    Ok(AlarmStatus::Normal)
-                }
+                unimplemented!("SPI cannot read device registers");
             }
         }
     };
