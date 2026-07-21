@@ -18,14 +18,14 @@ use embedded_hal::spi::SpiDevice;
 /// B23 B22 B21 B20 B19 B18 B17 B16 REGISTER     HEX
 ///  0   0   0   0   0   0   0   0   NOOP        0x00
 ///  0   0   0   0   0   0   0   1   DEVID       0x01
-///  0   0   0   0   0   0   1   1   SYNC        0x02
+///  0   0   0   0   0   0   1   0   SYNC        0x02
 ///  0   0   0   0   0   0   1   1   CONFIG      0x03
 ///  0   0   0   0   0   1   0   0   GAIN        0x04
 ///  0   0   0   0   0   1   0   1   TRIGGER     0x05
 ///  0   0   0   0   0   1   1   1   STATUS      0x07
 ///  0   0   0   0   1   0   0   0   DACDATA     0x08
 #[allow(dead_code)]
-#[repr(C)]
+#[repr(u8)]
 enum Command {
     NOOP = 0b0000_0000,
     DEVID = 0b0000_0001,
@@ -126,7 +126,7 @@ impl Default for Mode {
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 /// Alarm when supply voltage is below what is required to power the internal reference and gain buffer. DAC outputs 0 volts while supply is too low.
-/// Upon supply exceeding the analog threshold DAC output returns to normal operation with the output code uneffected.
+/// Upon supply exceeding the analog threshold DAC output returns to normal operation with the output code unaffected.
 /// Power on value is [`AlarmStatus::Normal`]
 pub enum AlarmStatus {
     /// Not enough headroom, reference buffer shutdown. DAC outputs 0 volts.
