@@ -101,6 +101,19 @@ fn set_sync() {
 
 // Config Register
 #[test]
+#[should_panic]
+fn read_reference() {
+    let expectations = [];
+    let mut spi = SpiMock::new(&expectations);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+
+    // Unimplemented for SPI
+    let _ = d12.get_internal_reference();
+
+    spi.done();
+}
+
+#[test]
 fn set_reference() {
     let expectations = [
         SpiTransaction::transaction_start(),
@@ -117,6 +130,19 @@ fn set_reference() {
 
     d12.set_internal_reference(InternalReference::Disabled)
         .expect("Shouldn't panic on turning reference off");
+
+    spi.done();
+}
+
+#[test]
+#[should_panic]
+fn read_power_state() {
+    let expectations = [];
+    let mut spi = SpiMock::new(&expectations);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+
+    // Unimplemented for SPI
+    let _ = d12.get_power_state();
 
     spi.done();
 }

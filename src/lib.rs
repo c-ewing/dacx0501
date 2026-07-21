@@ -244,6 +244,10 @@ macro_rules! Dac {
                 Ok(())
             }
 
+            /// Get internal reference state
+            pub fn get_internal_reference(&mut self) -> Result<InternalReference, DacError> {
+                unimplemented!("SPI cannot read device registers");
+            }
 
             /// Enables and disables the device internal reference. The internal reference is on by default
             pub fn set_internal_reference(
@@ -253,6 +257,11 @@ macro_rules! Dac {
                 self.dac_config.ref_power = intern_ref;
                 self.spi.write(&[Command::CONFIG as u8, self.dac_config.ref_power as u8, self.dac_config.dac_power as u8]).map_err(DacError::from)?;
                 Ok(())
+            }
+
+            /// Get device power state
+            pub fn get_power_state(&mut self) -> Result<PowerState, DacError> {
+                unimplemented!("SPI cannot read device registers");
             }
 
             /// In power-off state the device output is connected to GND through a 1-kΩ internal
