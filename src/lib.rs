@@ -161,9 +161,8 @@ macro_rules! Dac {
                 if level as u32 & (1u32 << $bits) > 0 {
                     return Err(DacError::ValueOverflow);
                 }
-                self.data[0] = Command::DACDATA as u8;
-                self.data[1..].copy_from_slice(level.to_be_bytes().as_slice());
-                self.spi.write(&self.data).map_err(DacError::from)?;
+                let bytes = level.to_be_bytes();
+                self.spi.write(&[Command::DACDATA as u8, bytes[0], bytes[1]]).map_err(DacError::from)?;
                 Ok(())
             }
 
@@ -171,11 +170,10 @@ macro_rules! Dac {
             ///
             /// This function sets the output level without checking the bounds on the size of the
             /// value for the specified DAC
-            pub unsafe fn set_output_level_unckecked(&mut self, level: u16) -> Result<(), DacError> {
+            pub unsafe fn set_output_level_unchecked(&mut self, level: u16) -> Result<(), DacError> {
                 // Data are MSB aligned in straight binary format
-                self.data[0] = Command::DACDATA as u8;
-                self.data[1..].copy_from_slice(level.to_be_bytes().as_slice());
-                self.spi.write(&self.data).map_err(DacError::from)?;
+                let bytes = level.to_be_bytes();
+                self.spi.write(&[Command::DACDATA as u8, bytes[0], bytes[1]]).map_err(DacError::from)?;
                 Ok(())
             }
 
@@ -195,9 +193,8 @@ macro_rules! Dac {
             /// Set the output voltage of the device without any extra bounds checks
             pub fn set_output_level(&mut self, level: u16) -> Result<(), DacError> {
                 // Data are MSB aligned in straight binary format
-                self.data[0] = Command::DACDATA as u8;
-                self.data[1..].copy_from_slice(level.to_be_bytes().as_slice());
-                self.spi.write(&self.data).map_err(DacError::from)?;
+                let bytes = level.to_be_bytes();
+                self.spi.write(&[Command::DACDATA as u8, bytes[0], bytes[1]]).map_err(DacError::from)?;
                 Ok(())
             }
         }
@@ -211,7 +208,6 @@ macro_rules! Dac {
         $(#[$meta])*
         pub struct $Name<SPI> {
             spi: SPI,
-            data: [u8; 3],
             dac_config: DACConfig,
         }
 
@@ -225,7 +221,6 @@ macro_rules! Dac {
             pub fn new(spi: SPI) -> Self {
                 Self {
                     spi,
-                    data: [0, 0, 0],
                     dac_config: DACConfig::default(),
                 }
             }
@@ -237,10 +232,7 @@ macro_rules! Dac {
                 intern_ref: InternalReference,
             ) -> Result<(), DacError> {
                 self.dac_config.ref_power = intern_ref;
-                self.data[0] = Command::CONFIG as u8;
-                self.data[1] = self.dac_config.ref_power as u8;
-                self.data[2] = self.dac_config.dac_power as u8;
-                self.spi.write(&self.data).map_err(DacError::from)?;
+                self.spi.write(&[Command::CONFIG as u8, self.dac_config.ref_power as u8, self.dac_config.dac_power as u8]).map_err(DacError::from)?;
                 Ok(())
             }
 
@@ -249,10 +241,7 @@ macro_rules! Dac {
             /// consumption to typically 15 µA at 5 V.
             pub fn set_power_state(&mut self, state: PowerState) -> Result<(), DacError> {
                 self.dac_config.dac_power = state;
-                self.data[0] = Command::CONFIG as u8;
-                self.data[1] = self.dac_config.ref_power as u8;
-                self.data[2] = self.dac_config.dac_power as u8;
-                self.spi.write(&self.data).map_err(DacError::from)?;
+                self.spi.write(&[Command::CONFIG as u8, self.dac_config.ref_power as u8, self.dac_config.dac_power as u8]).map_err(DacError::from)?;
                 Ok(())
             }
 
@@ -268,10 +257,7 @@ macro_rules! Dac {
             /// default
             pub fn set_reference_divider(&mut self, ref_div: ReferenceDivider) -> Result<(), DacError> {
                 self.dac_config.ref_divider = ref_div;
-                self.data[0] = Command::GAIN as u8;
-                self.data[1] = self.dac_config.ref_divider as u8;
-                self.data[2] = self.dac_config.buffer_gain as u8;
-                self.spi.write(&self.data).map_err(DacError::from)?;
+                self.spi.write(&[Command::GAIN as u8, self.dac_config.ref_divider as u8, self.dac_config.buffer_gain as u8]).map_err(DacError::from)?;
                 Ok(())
             }
 
@@ -281,10 +267,7 @@ macro_rules! Dac {
             /// output gain is set to `TwoX` by default
             pub fn set_output_gain(&mut self, gain: BufferGain) -> Result<(), DacError> {
                 self.dac_config.buffer_gain = gain;
-                self.data[0] = Command::GAIN as u8;
-                self.data[1] = self.dac_config.ref_divider as u8;
-                self.data[2] = self.dac_config.buffer_gain as u8;
-                self.spi.write(&self.data).map_err(DacError::from)?;
+                self.spi.write(&[Command::GAIN as u8, self.dac_config.ref_divider as u8, self.dac_config.buffer_gain as u8]).map_err(DacError::from)?;
                 Ok(())
             }
         }
