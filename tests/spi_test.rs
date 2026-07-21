@@ -263,9 +263,10 @@ fn set_soft_reset() {
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut _d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
 
-    unimplemented!("Soft reset not supported");
+    d12.soft_reset().expect("Soft reset should not panic");
+    spi.done();
 }
 
 // STATUS Register

@@ -315,6 +315,13 @@ macro_rules! Dac {
                 Ok(())
             }
 
+            /// Soft reset, reset device to power on defaults.
+            pub fn soft_reset(&mut self) -> Result<(), DacError> {
+                self.spi.write(&[Command::TRIGGER as u8, 0x00, 0b0000_1010]).map_err(DacError::from)?;
+                self.dac_config = DACConfig::default();
+                Ok(())
+            }
+
             /// UNIMPLEMENTED:
             /// `AlarmStatus` is `High` when the difference between the reference and supply pins is below a minimum
             /// analog threshold. The status is `Low` otherwise. When `High`, the reference buffer is shut down, and the DAC
