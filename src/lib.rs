@@ -206,6 +206,11 @@ macro_rules! Dac {
                 }
             }
 
+            /// Write to the NOOP register, has no effects
+            pub fn set_noop(&mut self) -> Result<(), DacError> {
+                self.spi.write(&[Command::NOOP as u8, 0x00, 0x00]).map_err(DacError::from)?;
+                Ok(())
+            }
 
             /// Enables and disables the device internal reference. The internal reference is on by default
             pub fn set_internal_reference(

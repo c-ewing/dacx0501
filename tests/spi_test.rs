@@ -44,10 +44,10 @@ fn set_noop() {
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let _d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
 
-    // FIXME:
-    unimplemented!("Writing to NOOP not supported");
+    d12.set_noop().expect("Writing to noop should not panic");
+    spi.done();
 }
 
 // DEVID Register
