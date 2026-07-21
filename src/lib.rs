@@ -309,6 +309,12 @@ macro_rules! Dac {
                 Ok(())
             }
 
+            /// Trigger synchronous load. Self resetting after load is completed. No effect for asynchronous operation.
+            pub fn set_load_dac(&mut self) -> Result<(), DacError> {
+                self.spi.write(&[Command::TRIGGER as u8, 0x00, 0b000_1_0000]).map_err(DacError::from)?;
+                Ok(())
+            }
+
             /// UNIMPLEMENTED:
             /// `AlarmStatus` is `High` when the difference between the reference and supply pins is below a minimum
             /// analog threshold. The status is `Low` otherwise. When `High`, the reference buffer is shut down, and the DAC

@@ -244,16 +244,15 @@ fn set_buffer_gain() {
 fn set_load_dac() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x05, 0x00, 0b000_0_0000]),
-        SpiTransaction::transaction_end(),
-        SpiTransaction::transaction_start(),
         SpiTransaction::write_vec(vec![0x05, 0x00, 0b000_1_0000]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut _d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new(&mut spi);
 
-    unimplemented!("Triggering DAC load is unsopported");
+    d12.set_load_dac()
+        .expect("Triggering load should not panic");
+    spi.done();
 }
 
 #[test]
