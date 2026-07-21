@@ -1,15 +1,13 @@
 
 # DACx0501
 
-[![crates.io](https://img.shields.io/crates/d/dacx0501.svg)](https://crates.io/crates/dacx0501)
-[![crates.io](https://img.shields.io/crates/v/dacx0501.svg)](https://crates.io/crates/dacx0501)
-[![Documentation](https://docs.rs/dacx0501/badge.svg)](https://docs.rs/dacx0501)
+Forked from https://github.com/jrmoulton/dacx0501
 
 An embedded-hal DAC Driver
 
 ## What is DACx0501
 
-This crate is an embedded-hal driver library implementation for the Texas Instruments 80501, 70501 and 60501 DACs. It relies on the embedded-hal 1.0.0-alpha.8 traits being implemented in the board hal.
+This crate is an embedded-hal driver library implementation for the Texas Instruments 80501, 70501 and 60501 DACs. It relies on the embedded-hal ^1.0.0 traits being implemented in the board hal.
 
 ## What is supported
 
