@@ -50,78 +50,58 @@ struct DACConfig {
 
 /// DAC power state. When powered down the DAC output is connected to ground through a 1k resistor.
 /// The device default is [`PowerState::On`]
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum PowerState {
     /// Normal operation
+    #[default]
     On,
     /// Power down, output connected to ground
     Down,
 }
-impl Default for PowerState {
-    fn default() -> Self {
-        Self::On
-    }
-}
 
 /// Output buffer gain.
 /// Power on value is [`BufferGain::Two`]
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum BufferGain {
     /// The output voltage of the device is [0 .. VREF]
     None,
     /// The output voltage of the device is [0 .. 2*VREF]
+    #[default]
     Two,
-}
-impl Default for BufferGain {
-    fn default() -> Self {
-        Self::Two
-    }
 }
 
 /// DAC reference divider which applies to both internal and external reference sources.
 /// Power on value is [`ReferenceDivider::None`]
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum ReferenceDivider {
     /// The reference voltage is not modified
+    #[default]
     None,
     /// The reference voltage is divided by 2
     Two,
 }
-impl Default for ReferenceDivider {
-    fn default() -> Self {
-        Self::None
-    }
-}
 
 /// Status of the internal reference.
 /// Power on value is [`InternalReference::Enabled`]
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum InternalReference {
     /// The device internal reference is enabled
+    #[default]
     Enabled,
     /// The device internal reference is disabled. External reference must be provided.
     Disabled,
-}
-impl Default for InternalReference {
-    fn default() -> Self {
-        Self::Enabled
-    }
 }
 
 /// Synchronous (triggered), or asynchronous (continuous) output of a value loaded into the DACDATA register.
 /// Synchronous output is triggered by writing to the LDAC bit of the trigger register.
 /// Power on value is [`Mode::Asynchronous`]
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum Mode {
     /// The device internal reference is enabled
+    #[default]
     Asynchronous,
     /// The device internal reference is disabled. External reference must be provided.
     Synchronous,
-}
-impl Default for Mode {
-    fn default() -> Self {
-        Self::Asynchronous
-    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
