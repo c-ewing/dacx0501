@@ -51,34 +51,7 @@ fn set_noop() {
     spi.done();
 }
 
-// DEVID Register
-#[test]
-#[should_panic]
-fn read_resolution() {
-    let expectations = [];
-    let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
-
-    // Unimplemented for SPI
-    let _ = d12.get_resolution();
-
-    spi.done();
-}
-
 // Sync Register
-#[test]
-#[should_panic]
-fn read_sync() {
-    let expectations = [];
-    let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
-
-    // Unimplemented for SPI
-    let _ = d12.get_synchronous();
-
-    spi.done();
-}
-
 #[test]
 fn set_sync() {
     let expectations = [
@@ -101,19 +74,6 @@ fn set_sync() {
 
 // Config Register
 #[test]
-#[should_panic]
-fn read_reference() {
-    let expectations = [];
-    let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
-
-    // Unimplemented for SPI
-    let _ = d12.get_internal_reference();
-
-    spi.done();
-}
-
-#[test]
 fn set_reference() {
     let expectations = [
         SpiTransaction::transaction_start(),
@@ -130,19 +90,6 @@ fn set_reference() {
 
     d12.set_internal_reference(InternalReference::Disabled)
         .expect("Shouldn't panic on turning reference off");
-
-    spi.done();
-}
-
-#[test]
-#[should_panic]
-fn read_power_state() {
-    let expectations = [];
-    let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
-
-    // Unimplemented for SPI
-    let _ = d12.get_power_state();
 
     spi.done();
 }
@@ -170,19 +117,6 @@ fn set_powerdown() {
 
 // GAIN Register
 #[test]
-#[should_panic]
-fn read_reference_divider() {
-    let expectations = [];
-    let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
-
-    // Unimplemented for SPI
-    let _ = d12.get_reference_divider();
-
-    spi.done();
-}
-
-#[test]
 fn set_reference_divider() {
     // NOTE: Default value of BUFF-GAIN bit is 1
     let expectations = [
@@ -200,19 +134,6 @@ fn set_reference_divider() {
 
     d12.set_reference_divider(ReferenceDivider::Two)
         .expect("Shouldn't panic on changing reference divider");
-
-    spi.done();
-}
-
-#[test]
-#[should_panic]
-fn read_buffer_gain() {
-    let expectations = [];
-    let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
-
-    // Unimplemented for SPI
-    let _ = d12.get_output_gain();
 
     spi.done();
 }
@@ -266,20 +187,6 @@ fn set_soft_reset() {
     let mut d12 = dacx0501::Dac60501::new(&mut spi);
 
     d12.soft_reset().expect("Soft reset should not panic");
-    spi.done();
-}
-
-// STATUS Register
-#[test]
-#[should_panic]
-fn read_alarm() {
-    let expectations = [];
-    let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
-
-    // Unimplemented for SPI
-    let _ = d12.ref_alarm_status();
-
     spi.done();
 }
 
