@@ -161,20 +161,20 @@ where
         }
     }
 
+    fn write_register(&mut self, c: Command, data: [u8; 2]) -> Result<(), DacError<SPI::Error>> {
+        self.spi
+            .write(&[c as u8, data[0], data[1]])
+            .map_err(DacError::SpiError)
+    }
+
     /// Write to the NOOP register, has no effects
     pub fn set_noop(&mut self) -> Result<(), DacError<SPI::Error>> {
-        self.spi
-            .write(&[Command::NOOP as u8, 0x00, 0x00])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        self.write_register(Command::NOOP, [0x00, 0x00])
     }
 
     /// Set whether the DAC is triggered by load DAC or if it is set to update immediately
     pub fn set_synchronous(&mut self, mode: Mode) -> Result<(), DacError<SPI::Error>> {
-        self.spi
-            .write(&[Command::SYNC as u8, 0x00, mode as u8])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        self.write_register(Command::SYNC, [0x00, mode as u8])
     }
 
     /// Enables and disables the device internal reference. The internal reference is on by default
@@ -183,14 +183,10 @@ where
         intern_ref: InternalReference,
     ) -> Result<(), DacError<SPI::Error>> {
         self.config.ref_power = intern_ref;
-        self.spi
-            .write(&[
-                Command::CONFIG as u8,
-                self.config.ref_power as u8,
-                self.config.dac_power as u8,
-            ])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        self.write_register(
+            Command::CONFIG,
+            [self.config.ref_power as u8, self.config.dac_power as u8],
+        )
     }
 
     /// In power-off state the device output is connected to GND through a 1-kΩ internal
@@ -198,14 +194,10 @@ where
     /// consumption to typically 15 µA at 5 V.
     pub fn set_power_state(&mut self, state: PowerState) -> Result<(), DacError<SPI::Error>> {
         self.config.dac_power = state;
-        self.spi
-            .write(&[
-                Command::CONFIG as u8,
-                self.config.ref_power as u8,
-                self.config.dac_power as u8,
-            ])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        self.write_register(
+            Command::CONFIG,
+            [self.config.ref_power as u8, self.config.dac_power as u8],
+        )
     }
 
     /// The reference voltage to the device (either from the internal or external reference) can be
@@ -223,14 +215,10 @@ where
         ref_div: ReferenceDivider,
     ) -> Result<(), DacError<SPI::Error>> {
         self.config.ref_divider = ref_div;
-        self.spi
-            .write(&[
-                Command::GAIN as u8,
-                self.config.ref_divider as u8,
-                self.config.buffer_gain as u8,
-            ])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        self.write_register(
+            Command::GAIN,
+            [self.config.ref_divider as u8, self.config.buffer_gain as u8],
+        )
     }
 
     /// When set to `TwoX`, the buffer amplifier for the DAC has a gain of 2x doubling the
@@ -239,31 +227,21 @@ where
     /// output gain is set to `TwoX` by default
     pub fn set_output_gain(&mut self, gain: BufferGain) -> Result<(), DacError<SPI::Error>> {
         self.config.buffer_gain = gain;
-        self.spi
-            .write(&[
-                Command::GAIN as u8,
-                self.config.ref_divider as u8,
-                self.config.buffer_gain as u8,
-            ])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        self.write_register(
+            Command::GAIN,
+            [self.config.ref_divider as u8, self.config.buffer_gain as u8],
+        )
     }
 
     /// Trigger synchronous load. Self resetting after load is completed. No effect for asynchronous operation.
     pub fn set_load_dac(&mut self) -> Result<(), DacError<SPI::Error>> {
-        self.spi
-            .write(&[Command::TRIGGER as u8, 0x00, 0b000_1_0000])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        self.write_register(Command::TRIGGER, [0x00, 0b000_1_0000])
     }
 
     /// Soft reset, reset device to power on defaults.
     pub fn soft_reset(&mut self) -> Result<(), DacError<SPI::Error>> {
-        self.spi
-            .write(&[Command::TRIGGER as u8, 0x00, 0b0000_1010])
-            .map_err(DacError::SpiError)?;
         self.config = DACConfig::default();
-        Ok(())
+        self.write_register(Command::TRIGGER, [0x00, 0b0000_1010])
     }
 
     /// Set the output voltage of the device and check the level bounds for the specified device
@@ -274,20 +252,14 @@ where
             return Err(DacError::ValueOverflow);
         }
 
-        let bytes = (level << (Self::REGISTER_WIDTH - BITS)).to_be_bytes();
-        self.spi
-            .write(&[Command::DACDATA as u8, bytes[0], bytes[1]])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        let bytes: [u8; 2] = (level << (Self::REGISTER_WIDTH - BITS)).to_be_bytes();
+        self.write_register(Command::DACDATA, bytes)
     }
 
     /// This function sets the output level without checking the bounds on the size of the
     /// value for the specified DAC
     pub fn set_output_level_unchecked(&mut self, level: u16) -> Result<(), DacError<SPI::Error>> {
-        let bytes = (level << (Self::REGISTER_WIDTH - BITS)).to_be_bytes();
-        self.spi
-            .write(&[Command::DACDATA as u8, bytes[0], bytes[1]])
-            .map_err(DacError::SpiError)?;
-        Ok(())
+        let bytes: [u8; 2] = (level << (Self::REGISTER_WIDTH - BITS)).to_be_bytes();
+        self.write_register(Command::DACDATA, bytes)
     }
 }
