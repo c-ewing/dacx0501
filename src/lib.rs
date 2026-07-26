@@ -134,6 +134,8 @@ pub enum AlarmStatus {
 pub enum DacError<E> {
     /// The value for the specified DAC overflowed
     ValueOverflow,
+    /// Unknown value for register
+    UnknownValue,
     /// An error on the SPI or I2C interface
     InterfaceError(E),
 }
@@ -141,6 +143,7 @@ impl<E: fmt::Debug> fmt::Display for DacError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ValueOverflow => write!(f, "The data value was too large for the selected DAC"),
+            Self::UnknownValue => write!(f, "Unknown value for register"),
             Self::InterfaceError(e) => write!(f, "Interface error: {:?}", e),
         }
     }
@@ -234,7 +237,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
             0b000 => Ok(16),
             0b001 => Ok(14),
             0b010 => Ok(12),
-            _ => Err(DacError::ValueOverflow),
+            _ => Err(DacError::UnknownValue),
         }
     }
 
@@ -244,7 +247,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         match buf[1] >> 7 {
             0b00 => Ok(ResetValue::Zero),
             0b01 => Ok(ResetValue::MidScale),
-            _ => Err(DacError::ValueOverflow),
+            _ => Err(DacError::UnknownValue),
         }
     }
 
@@ -254,7 +257,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         match buf[1] & 0b0000000_1 {
             0b0 => Ok(Mode::Asynchronous),
             0b1 => Ok(Mode::Synchronous),
-            _ => Err(DacError::ValueOverflow),
+            _ => Err(DacError::UnknownValue),
         }
     }
 
@@ -264,7 +267,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         match buf[0] & 0b0000000_1 {
             0b0 => Ok(InternalReference::Enabled),
             0b1 => Ok(InternalReference::Disabled),
-            _ => Err(DacError::ValueOverflow),
+            _ => Err(DacError::UnknownValue),
         }
     }
 
@@ -274,7 +277,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         match buf[1] & 0b0000000_1 {
             0b0 => Ok(PowerState::On),
             0b1 => Ok(PowerState::Down),
-            _ => Err(DacError::ValueOverflow),
+            _ => Err(DacError::UnknownValue),
         }
     }
 
@@ -284,7 +287,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         match buf[0] & 0b0000000_1 {
             0b0 => Ok(ReferenceDivider::None),
             0b1 => Ok(ReferenceDivider::Two),
-            _ => Err(DacError::ValueOverflow),
+            _ => Err(DacError::UnknownValue),
         }
     }
 
@@ -294,7 +297,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         match buf[1] & 0b0000000_1 {
             0b0 => Ok(BufferGain::None),
             0b1 => Ok(BufferGain::Two),
-            _ => Err(DacError::ValueOverflow),
+            _ => Err(DacError::UnknownValue),
         }
     }
 
@@ -304,7 +307,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         match buf[1] & 0b0000000_1 {
             0b0 => Ok(AlarmStatus::Normal),
             0b1 => Ok(AlarmStatus::Alarm),
-            _ => Err(DacError::ValueOverflow),
+            _ => Err(DacError::UnknownValue),
         }
     }
 
