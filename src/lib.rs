@@ -134,17 +134,14 @@ pub enum AlarmStatus {
 pub enum DacError<E> {
     /// The value for the specified DAC overflowed
     ValueOverflow,
-    /// An internal embedded hal SPI transfer error
-    SpiError(E),
-    /// An internal embedded hal I2C transfer error
-    I2cError(E),
+    /// An error on the SPI or I2C interface
+    InterfaceError(E),
 }
 impl<E: fmt::Debug> fmt::Display for DacError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ValueOverflow => write!(f, "The data value was too large for the selected DAC"),
-            Self::SpiError(e) => write!(f, "SPI error: {:?}", e),
-            Self::I2cError(e) => write!(f, "I2C error: {:?}", e),
+            Self::InterfaceError(e) => write!(f, "Interface error: {:?}", e),
         }
     }
 }
@@ -168,7 +165,7 @@ impl<SPI: SpiDevice> Interface for SpiInterface<SPI> {
     fn write_register(&mut self, c: Register, data: [u8; 2]) -> Result<(), DacError<SPI::Error>> {
         self.spi
             .write(&[c as u8, data[0], data[1]])
-            .map_err(DacError::SpiError)
+            .map_err(DacError::InterfaceError)
     }
 }
 
@@ -183,11 +180,11 @@ impl<I2C: I2c> Interface for I2cInterface<I2C> {
     fn write_register(&mut self, c: Register, data: [u8; 2]) -> Result<(), DacError<Self::Error>> {
         self.i2c
             .write(self.address, &[c as u8, data[0], data[1]])
-            .map_err(DacError::I2cError)
+            .map_err(DacError::InterfaceError)
     }
 }
 
-/// DAC TYPES:
+/// Generic DAC. Use [`Dac80501`], [`Dac70501`] or [`Dac60501`] for the specific DACs rather than instantiating this directly
 pub struct DAC<I, const BITS: u8> {
     interface: I,
     config: DACConfig,
@@ -226,7 +223,7 @@ impl<I2C: I2c, const BITS: u8> DAC<I2cInterface<I2C>, BITS> {
         self.interface
             .i2c
             .write_read(self.interface.address, &[c as u8], &mut buf)
-            .map_err(DacError::I2cError)?;
+            .map_err(DacError::InterfaceError)?;
         Ok(buf)
     }
 
