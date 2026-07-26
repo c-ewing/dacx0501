@@ -386,3 +386,39 @@ fn set_output_mid_scale() {
 
     i2c.done();
 }
+
+#[test]
+fn read_output_level_12() {
+    let expectations = [I2cTransaction::write_read(
+        ADDR,
+        vec![0b0000_1000 as u8],
+        vec![0x80, 0x00],
+    )];
+    let mut i2c = I2cMock::new(&expectations);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
+
+    let level = d12
+        .get_output_level()
+        .expect("Should not panic fetching output level");
+    assert_eq!(level, 2048);
+
+    i2c.done();
+}
+
+#[test]
+fn read_output_level_16() {
+    let expectations = [I2cTransaction::write_read(
+        ADDR,
+        vec![0b0000_1000 as u8],
+        vec![0x80, 0x00],
+    )];
+    let mut i2c = I2cMock::new(&expectations);
+    let mut d16 = dacx0501::Dac80501::new_i2c(&mut i2c, ADDR);
+
+    let level = d16
+        .get_output_level()
+        .expect("Should not panic fetching output level");
+    assert_eq!(level, 32768);
+
+    i2c.done();
+}

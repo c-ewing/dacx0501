@@ -310,6 +310,12 @@ impl<I2C: I2c, const BITS: u8> DAC<I2cInterface<I2C>, BITS> {
             _ => Err(DacError::ValueOverflow),
         }
     }
+
+    /// Returns the current output level of the DAC
+    pub fn get_output_level(&mut self) -> Result<u16, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::DACDATA)?;
+        Ok(u16::from_be_bytes(buf) >> (Self::REGISTER_WIDTH - BITS))
+    }
 }
 
 impl<I, const BITS: u8> DAC<I, BITS>
