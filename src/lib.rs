@@ -24,6 +24,7 @@ use embedded_hal::spi::SpiDevice;
 //  0   0   0   0   0   1   1   1   STATUS      0x07
 //  0   0   0   0   1   0   0   0   DACDATA     0x08
 // Datasheet page 27
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum Register {
     /// NOOP Register
@@ -342,22 +343,22 @@ where
         &mut self,
         intern_ref: InternalReference,
     ) -> Result<(), DacError<I::Error>> {
-        self.config.ref_power = intern_ref;
         self.interface.write_register(
             Register::CONFIG,
-            [self.config.ref_power as u8, self.config.dac_power as u8],
-        )
+            [intern_ref as u8, self.config.dac_power as u8],
+        )?;
+        self.config.ref_power = intern_ref;
+        Ok(())
     }
 
     /// In power-off state the device output is connected to GND through a 1-kΩ internal
     /// resistor. The device is in power `On` state by default. This reduces current
     /// consumption to typically 15 µA at 5 V.
     pub fn set_power_state(&mut self, state: PowerState) -> Result<(), DacError<I::Error>> {
+        self.interface
+            .write_register(Register::CONFIG, [self.config.ref_power as u8, state as u8])?;
         self.config.dac_power = state;
-        self.interface.write_register(
-            Register::CONFIG,
-            [self.config.ref_power as u8, self.config.dac_power as u8],
-        )
+        Ok(())
     }
 
     /// The reference voltage to the device (either from the internal or external reference) can be
@@ -374,11 +375,12 @@ where
         &mut self,
         ref_div: ReferenceDivider,
     ) -> Result<(), DacError<I::Error>> {
-        self.config.ref_divider = ref_div;
         self.interface.write_register(
             Register::GAIN,
-            [self.config.ref_divider as u8, self.config.buffer_gain as u8],
-        )
+            [ref_div as u8, self.config.buffer_gain as u8],
+        )?;
+        self.config.ref_divider = ref_div;
+        Ok(())
     }
 
     /// When set to `TwoX`, the buffer amplifier for the DAC has a gain of 2x doubling the
@@ -386,11 +388,10 @@ where
     /// especially useful when using the internal reference divider set to `Half`. The
     /// output gain is set to `TwoX` by default
     pub fn set_output_gain(&mut self, gain: BufferGain) -> Result<(), DacError<I::Error>> {
+        self.interface
+            .write_register(Register::GAIN, [self.config.ref_divider as u8, gain as u8])?;
         self.config.buffer_gain = gain;
-        self.interface.write_register(
-            Register::GAIN,
-            [self.config.ref_divider as u8, self.config.buffer_gain as u8],
-        )
+        Ok(())
     }
 
     /// Trigger synchronous load. Self resetting after load is completed. No effect for asynchronous operation.
@@ -403,7 +404,6 @@ where
     pub fn soft_reset(&mut self) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::TRIGGER, [0x00, 0b0000_1010])?;
-        // Reset internal state ONLY if write was successful.
         self.config = DacConfig::default();
         Ok(())
     }
