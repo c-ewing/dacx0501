@@ -10,6 +10,7 @@
 
 use core::fmt;
 
+use embedded_hal::i2c::I2c;
 use embedded_hal::spi::SpiDevice;
 
 /// Command byte, first byte of the transfer to the DAC
@@ -57,7 +58,7 @@ struct DACConfig {
 
 /// DAC power state. When powered down the DAC output is connected to ground through a 1k resistor.
 /// The device default is [`PowerState::On`]
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PowerState {
     /// Normal operation
     #[default]
@@ -68,7 +69,7 @@ pub enum PowerState {
 
 /// Output buffer gain.
 /// Power on value is [`BufferGain::Two`]
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BufferGain {
     /// The output voltage of the device is [0 .. VREF]
     None,
@@ -79,7 +80,7 @@ pub enum BufferGain {
 
 /// DAC reference divider which applies to both internal and external reference sources.
 /// Power on value is [`ReferenceDivider::None`]
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ReferenceDivider {
     /// The reference voltage is not modified
     #[default]
@@ -90,7 +91,7 @@ pub enum ReferenceDivider {
 
 /// Status of the internal reference.
 /// Power on value is [`InternalReference::Enabled`]
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum InternalReference {
     /// The device internal reference is enabled
     #[default]
@@ -102,7 +103,7 @@ pub enum InternalReference {
 /// Synchronous (triggered), or asynchronous (continuous) output of a value loaded into the DACDATA register.
 /// Synchronous output is triggered by writing to the LDAC bit of the trigger register.
 /// Power on value is [`Mode::Asynchronous`]
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Mode {
     /// The device internal reference is enabled
     #[default]
@@ -111,7 +112,16 @@ pub enum Mode {
     Synchronous,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+/// Reset value of the DAC output on power on reset.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ResetValue {
+    /// DAC output is 0 volts
+    Zero,
+    /// DAC output is mid scale
+    MidScale,
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 /// Alarm when supply voltage is below what is required to power the internal reference and gain buffer. DAC outputs 0 volts while supply is too low.
 /// Upon supply exceeding the analog threshold DAC output returns to normal operation with the output code unaffected.
 /// Power on value is [`AlarmStatus::Normal`]
@@ -129,12 +139,15 @@ pub enum DacError<E> {
     ValueOverflow,
     /// An internal embedded hal SPI transfer error
     SpiError(E),
+    /// An internal embedded hal I2C transfer error
+    I2cError(E),
 }
 impl<E: fmt::Debug> fmt::Display for DacError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::ValueOverflow => write!(f, "The data value was too large for the selected DAC"),
             Self::SpiError(e) => write!(f, "SPI error: {:?}", e),
+            Self::I2cError(e) => write!(f, "I2C error: {:?}", e),
         }
     }
 }
@@ -148,7 +161,6 @@ pub trait Interface {
     fn write_register(&mut self, c: Register, data: [u8; 2]) -> Result<(), DacError<Self::Error>>;
 }
 
-// FIXME: this
 /// Wrapper over an SPI interface, holding the embedded-hal spi data
 pub struct SpiInterface<SPI> {
     spi: SPI,
@@ -160,6 +172,21 @@ impl<SPI: SpiDevice> Interface for SpiInterface<SPI> {
         self.spi
             .write(&[c as u8, data[0], data[1]])
             .map_err(DacError::SpiError)
+    }
+}
+
+/// Wrapper over an I2C interface, holding the embedded-hal i2c data and the device address
+pub struct I2cInterface<I2C> {
+    i2c: I2C,
+    address: u8,
+}
+impl<I2C: I2c> Interface for I2cInterface<I2C> {
+    type Error = I2C::Error;
+
+    fn write_register(&mut self, c: Register, data: [u8; 2]) -> Result<(), DacError<Self::Error>> {
+        self.i2c
+            .write(self.address, &[c as u8, data[0], data[1]])
+            .map_err(DacError::I2cError)
     }
 }
 
@@ -180,12 +207,113 @@ impl<SPI: SpiDevice, const BITS: u8> DAC<SpiInterface<SPI>, BITS> {
     }
 }
 
-/// Dac80501, 16 bit DAC
-pub type Dac80501<SPI> = DAC<SPI, 16>;
+/// Dac80501, 16 bit DAC,
+pub type Dac80501<I> = DAC<I, 16>;
 /// Dac70501, 14 bit DAC
-pub type Dac70501<SPI> = DAC<SPI, 14>;
+pub type Dac70501<I> = DAC<I, 14>;
 /// Dac60501, 12 bit DAC
-pub type Dac60501<SPI> = DAC<SPI, 12>;
+pub type Dac60501<I> = DAC<I, 12>;
+
+impl<I2C: I2c, const BITS: u8> DAC<I2cInterface<I2C>, BITS> {
+    /// Creates a new instance of the specified dac with the internal state set to match
+    /// the device defaults using an I2C interface
+    pub fn new_i2c(i2c: I2C, address: u8) -> Self {
+        Self {
+            interface: I2cInterface { i2c, address },
+            config: DACConfig::default(),
+        }
+    }
+
+    fn read_register(&mut self, c: Register) -> Result<[u8; 2], DacError<I2C::Error>> {
+        let mut buf = [0u8; 2];
+        self.interface
+            .i2c
+            .write_read(self.interface.address, &[c as u8], &mut buf)
+            .map_err(DacError::I2cError)?;
+        Ok(buf)
+    }
+
+    /// Returns the resolution of the device in bits
+    pub fn get_resolution(&mut self) -> Result<u8, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::DEVID)?;
+        match buf[0] >> 4 {
+            0b000 => Ok(16),
+            0b001 => Ok(14),
+            0b010 => Ok(12),
+            _ => Err(DacError::ValueOverflow),
+        }
+    }
+
+    /// Returns the power on reset value of the DAC
+    pub fn get_reset_value(&mut self) -> Result<ResetValue, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::DEVID)?;
+        match buf[1] >> 7 {
+            0b00 => Ok(ResetValue::Zero),
+            0b01 => Ok(ResetValue::MidScale),
+            _ => Err(DacError::ValueOverflow),
+        }
+    }
+
+    /// Returns whether the device is in synchronous or asynchronous mode
+    pub fn get_synchronous(&mut self) -> Result<Mode, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::SYNC)?;
+        match buf[1] & 0b0000000_1 {
+            0b0 => Ok(Mode::Asynchronous),
+            0b1 => Ok(Mode::Synchronous),
+            _ => Err(DacError::ValueOverflow),
+        }
+    }
+
+    /// Returns the whether the internal reference is enabled or disabled
+    pub fn get_internal_reference(&mut self) -> Result<InternalReference, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::CONFIG)?;
+        match buf[0] & 0b0000000_1 {
+            0b0 => Ok(InternalReference::Enabled),
+            0b1 => Ok(InternalReference::Disabled),
+            _ => Err(DacError::ValueOverflow),
+        }
+    }
+
+    /// Returns the DAC power state, on or down
+    pub fn get_power_state(&mut self) -> Result<PowerState, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::CONFIG)?;
+        match buf[1] & 0b0000000_1 {
+            0b0 => Ok(PowerState::On),
+            0b1 => Ok(PowerState::Down),
+            _ => Err(DacError::ValueOverflow),
+        }
+    }
+
+    /// Returns the status of the reference divider, either no reference division or divide by two
+    pub fn get_reference_divider(&mut self) -> Result<ReferenceDivider, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::GAIN)?;
+        match buf[0] & 0b0000000_1 {
+            0b0 => Ok(ReferenceDivider::None),
+            0b1 => Ok(ReferenceDivider::Two),
+            _ => Err(DacError::ValueOverflow),
+        }
+    }
+
+    /// Returns the output buffer gain either no gain or two times gain
+    pub fn get_output_gain(&mut self) -> Result<BufferGain, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::GAIN)?;
+        match buf[1] & 0b0000000_1 {
+            0b0 => Ok(BufferGain::None),
+            0b1 => Ok(BufferGain::Two),
+            _ => Err(DacError::ValueOverflow),
+        }
+    }
+
+    /// Returns reference alarm status. Alarm occurs when supply is below what is required to output the maximum output voltage.
+    pub fn get_alarm_status(&mut self) -> Result<AlarmStatus, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::STATUS)?;
+        match buf[1] & 0b0000000_1 {
+            0b0 => Ok(AlarmStatus::Normal),
+            0b1 => Ok(AlarmStatus::Alarm),
+            _ => Err(DacError::ValueOverflow),
+        }
+    }
+}
 
 impl<I, const BITS: u8> DAC<I, BITS>
 where
