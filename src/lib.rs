@@ -24,7 +24,6 @@ use embedded_hal::spi::SpiDevice;
 ///  0   0   0   0   0   1   0   1   TRIGGER     0x05
 ///  0   0   0   0   0   1   1   1   STATUS      0x07
 ///  0   0   0   0   1   0   0   0   DACDATA     0x08
-#[allow(dead_code)]
 #[repr(u8)]
 pub enum Register {
     /// NOOP Register
@@ -46,14 +45,12 @@ pub enum Register {
 }
 
 /// DAC Configuration
-// TODO: Document
 #[derive(Default)]
 struct DACConfig {
     dac_power: PowerState,
     ref_power: InternalReference,
     ref_divider: ReferenceDivider,
     buffer_gain: BufferGain,
-    _dac_code: u16,
 }
 
 /// DAC power state. When powered down the DAC output is connected to ground through a 1k resistor.
