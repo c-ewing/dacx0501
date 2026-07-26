@@ -13,17 +13,17 @@ use core::fmt;
 use embedded_hal::i2c::I2c;
 use embedded_hal::spi::SpiDevice;
 
-/// Command byte, first byte of the transfer to the DAC
-///
-/// B23 B22 B21 B20 B19 B18 B17 B16 REGISTER     HEX
-///  0   0   0   0   0   0   0   0   NOOP        0x00
-///  0   0   0   0   0   0   0   1   DEVID       0x01
-///  0   0   0   0   0   0   1   0   SYNC        0x02
-///  0   0   0   0   0   0   1   1   CONFIG      0x03
-///  0   0   0   0   0   1   0   0   GAIN        0x04
-///  0   0   0   0   0   1   0   1   TRIGGER     0x05
-///  0   0   0   0   0   1   1   1   STATUS      0x07
-///  0   0   0   0   1   0   0   0   DACDATA     0x08
+/// Register byte. first byte of the transfer to the DAC
+// B23 B22 B21 B20 B19 B18 B17 B16 REGISTER     HEX
+//  0   0   0   0   0   0   0   0   NOOP        0x00
+//  0   0   0   0   0   0   0   1   DEVID       0x01
+//  0   0   0   0   0   0   1   0   SYNC        0x02
+//  0   0   0   0   0   0   1   1   CONFIG      0x03
+//  0   0   0   0   0   1   0   0   GAIN        0x04
+//  0   0   0   0   0   1   0   1   TRIGGER     0x05
+//  0   0   0   0   0   1   1   1   STATUS      0x07
+//  0   0   0   0   1   0   0   0   DACDATA     0x08
+// Datasheet page 27
 #[repr(u8)]
 pub enum Register {
     /// NOOP Register
