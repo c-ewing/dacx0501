@@ -395,9 +395,11 @@ where
 
     /// Soft reset, reset device to power on defaults.
     pub fn soft_reset(&mut self) -> Result<(), DacError<I::Error>> {
-        self.config = DACConfig::default();
         self.interface
-            .write_register(Register::TRIGGER, [0x00, 0b0000_1010])
+            .write_register(Register::TRIGGER, [0x00, 0b0000_1010])?;
+        // Reset internal state ONLY if write was successful.
+        self.config = DACConfig::default();
+        Ok(())
     }
 
     /// Set the output voltage of the device and check the level bounds for the specified device
