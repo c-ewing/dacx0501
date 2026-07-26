@@ -25,14 +25,22 @@ use embedded_hal::spi::SpiDevice;
 ///  0   0   0   0   1   0   0   0   DACDATA     0x08
 #[allow(dead_code)]
 #[repr(u8)]
-enum Command {
+pub enum Register {
+    /// NOOP Register
     NOOP = 0b0000_0000,
+    /// DEVID Register
     DEVID = 0b0000_0001,
+    /// SYNC Register
     SYNC = 0b0000_0010,
+    /// CONFIG Register
     CONFIG = 0b0000_0011,
+    /// GAIN Register
     GAIN = 0b0000_0100,
+    /// TRIGGER Register
     TRIGGER = 0b0000_0101,
+    /// STATUS Register
     STATUS = 0b0000_0111,
+    /// DAC Register
     DACDATA = 0b0000_1000,
 }
 
