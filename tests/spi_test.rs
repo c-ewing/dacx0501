@@ -6,6 +6,7 @@ use dacx0501::InternalReference;
 use dacx0501::Mode;
 use dacx0501::PowerState;
 use dacx0501::ReferenceDivider;
+use dacx0501::Register;
 use dacx0501::{self};
 use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 
@@ -13,7 +14,7 @@ use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction
 fn construction_16() {
     let expectations = [];
     let mut spi = SpiMock::new(&expectations);
-    let _d16 = dacx0501::Dac80501::new(&mut spi);
+    let _d16 = dacx0501::Dac80501::new_spi(&mut spi);
 
     spi.done();
 }
@@ -22,7 +23,7 @@ fn construction_16() {
 fn construction_14() {
     let expectations = [];
     let mut spi = SpiMock::new(&expectations);
-    let _d14 = dacx0501::Dac70501::new(&mut spi);
+    let _d14 = dacx0501::Dac70501::new_spi(&mut spi);
 
     spi.done();
 }
@@ -31,7 +32,7 @@ fn construction_14() {
 fn construction_12() {
     let expectations = [];
     let mut spi = SpiMock::new(&expectations);
-    let _d12 = dacx0501::Dac60501::new(&mut spi);
+    let _d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
     spi.done();
 }
@@ -41,11 +42,11 @@ fn construction_12() {
 fn set_noop() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x00, 0x00, 0x00]),
+        SpiTransaction::write_vec(vec![Register::NOOP as u8, 0x00, 0x00]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
     d12.set_noop().expect("Writing to noop should not panic");
     spi.done();
@@ -56,14 +57,14 @@ fn set_noop() {
 fn set_sync() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x02, 0x00, 0x00]),
+        SpiTransaction::write_vec(vec![Register::SYNC as u8, 0x00, 0x00]),
         SpiTransaction::transaction_end(),
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x02, 0x00, 0x01]),
+        SpiTransaction::write_vec(vec![Register::SYNC as u8, 0x00, 0x01]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
     d12.set_synchronous(Mode::Asynchronous)
         .expect("Should not panic setting async");
@@ -77,14 +78,14 @@ fn set_sync() {
 fn set_reference() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x03, 0b0000000_0, 0x00]),
+        SpiTransaction::write_vec(vec![Register::CONFIG as u8, 0b0000000_0, 0x00]),
         SpiTransaction::transaction_end(),
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x03, 0b0000000_1, 0x00]),
+        SpiTransaction::write_vec(vec![Register::CONFIG as u8, 0b0000000_1, 0x00]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
     d12.set_internal_reference(InternalReference::Enabled)
         .expect("Shouldn't panic on turning reference on");
 
@@ -98,14 +99,14 @@ fn set_reference() {
 fn set_powerdown() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x03, 0x00, 0b0000000_0]),
+        SpiTransaction::write_vec(vec![Register::CONFIG as u8, 0x00, 0b0000000_0]),
         SpiTransaction::transaction_end(),
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x03, 0x00, 0b0000000_1]),
+        SpiTransaction::write_vec(vec![Register::CONFIG as u8, 0x00, 0b0000000_1]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
     d12.set_power_state(PowerState::On)
         .expect("Shouldn't panic on turning dac on");
 
@@ -121,14 +122,14 @@ fn set_reference_divider() {
     // NOTE: Default value of BUFF-GAIN bit is 1
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x04, 0b0000000_0, 0x01]),
+        SpiTransaction::write_vec(vec![Register::GAIN as u8, 0b0000000_0, 0x01]),
         SpiTransaction::transaction_end(),
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x04, 0b0000000_1, 0x01]),
+        SpiTransaction::write_vec(vec![Register::GAIN as u8, 0b0000000_1, 0x01]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
     d12.set_reference_divider(ReferenceDivider::None)
         .expect("Shouldn't panic on changing reference divider");
 
@@ -143,14 +144,14 @@ fn set_buffer_gain() {
     // NOTE: Default value of BUFF-GAIN bit is 1
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x04, 0x00, 0b0000000_0]),
+        SpiTransaction::write_vec(vec![Register::GAIN as u8, 0x00, 0b0000000_0]),
         SpiTransaction::transaction_end(),
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x04, 0x00, 0b0000000_1]),
+        SpiTransaction::write_vec(vec![Register::GAIN as u8, 0x00, 0b0000000_1]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
     d12.set_output_gain(BufferGain::None)
         .expect("Shouldn't panic on changing buffer gain");
 
@@ -165,11 +166,11 @@ fn set_buffer_gain() {
 fn set_load_dac() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x05, 0x00, 0b000_1_0000]),
+        SpiTransaction::write_vec(vec![Register::TRIGGER as u8, 0x00, 0b000_1_0000]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
     d12.set_load_dac()
         .expect("Triggering load should not panic");
@@ -180,11 +181,11 @@ fn set_load_dac() {
 fn set_soft_reset() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x05, 0x00, 0b000_1010]),
+        SpiTransaction::write_vec(vec![Register::TRIGGER as u8, 0x00, 0b000_1010]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
     d12.soft_reset().expect("Soft reset should not panic");
     spi.done();
@@ -195,11 +196,11 @@ fn set_soft_reset() {
 fn set_output_0() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x08, 0x00, 0x00]),
+        SpiTransaction::write_vec(vec![Register::DACDATA as u8, 0x00, 0x00]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
     d12.set_output_level(0 as u16)
         .expect("Shouldn't panic on setting dac to 0 output");
 
@@ -210,7 +211,7 @@ fn set_output_0() {
 fn set_output_max_err() {
     let expectations = [];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
     assert_matches!(
         d12.set_output_level(u16::MAX),
@@ -224,11 +225,11 @@ fn set_output_max_err() {
 fn set_output_max() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x08, 0xFF, 0xFF]),
+        SpiTransaction::write_vec(vec![Register::DACDATA as u8, 0xFF, 0xFF]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d16 = dacx0501::Dac80501::new(&mut spi);
+    let mut d16 = dacx0501::Dac80501::new_spi(&mut spi);
 
     assert_matches!(d16.set_output_level(u16::MAX), Ok(()));
 
@@ -239,11 +240,11 @@ fn set_output_max() {
 fn set_output_mid_scale() {
     let expectations = [
         SpiTransaction::transaction_start(),
-        SpiTransaction::write_vec(vec![0x08, 0x80, 0x00]),
+        SpiTransaction::write_vec(vec![Register::DACDATA as u8, 0x80, 0x00]),
         SpiTransaction::transaction_end(),
     ];
     let mut spi = SpiMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501::new(&mut spi);
+    let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
     d12.set_output_level(2048)
         .expect("Setting to mid scale should not panic");
