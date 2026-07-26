@@ -17,7 +17,7 @@ const ADDR: u8 = 0b1001_000;
 fn construction_16() {
     let expectations = [];
     let mut i2c = I2cMock::new(&expectations);
-    let _d16 = dacx0501::Dac80501I2c::new(&mut i2c, ADDR);
+    let _d16 = dacx0501::Dac80501::new_i2c(&mut i2c, ADDR);
 
     i2c.done();
 }
@@ -26,7 +26,7 @@ fn construction_16() {
 fn construction_14() {
     let expectations = [];
     let mut i2c = I2cMock::new(&expectations);
-    let _d14 = dacx0501::Dac70501I2c::new(&mut i2c, ADDR);
+    let _d14 = dacx0501::Dac70501::new_i2c(&mut i2c, ADDR);
 
     i2c.done();
 }
@@ -35,7 +35,7 @@ fn construction_14() {
 fn construction_12() {
     let expectations = [];
     let mut i2c = I2cMock::new(&expectations);
-    let _d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let _d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     i2c.done();
 }
@@ -45,7 +45,7 @@ fn construction_12() {
 fn set_noop() {
     let expectations = [I2cTransaction::write(ADDR, vec![0x00, 0x00, 0x00])];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     d12.set_noop().expect("Writing to noop should not panic");
     i2c.done();
@@ -60,7 +60,7 @@ fn read_resolution() {
         I2cTransaction::write_read(ADDR, vec![0b0000_0001 as u8], vec![0b0_010_0001, 0x00]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let r = d12
         .get_resolution()
@@ -87,7 +87,7 @@ fn read_reset_value() {
         I2cTransaction::write_read(ADDR, vec![0b0000_0001 as u8], vec![0x00, 0b1_0010101]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let reset = d12
         .get_reset_value()
@@ -110,7 +110,7 @@ fn read_sync() {
         I2cTransaction::write_read(ADDR, vec![0b0000_0010 as u8], vec![0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let sync = d12.get_synchronous().expect("Should not panic");
     assert_eq!(sync, Mode::Asynchronous);
@@ -128,7 +128,7 @@ fn set_sync() {
         I2cTransaction::write(ADDR, vec![0x02, 0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     d12.set_synchronous(Mode::Asynchronous)
         .expect("Should not panic setting async");
@@ -145,7 +145,7 @@ fn read_reference() {
         I2cTransaction::write_read(ADDR, vec![0b0000_0011 as u8], vec![0x01, 0x00]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let reference = d12
         .get_internal_reference()
@@ -167,7 +167,7 @@ fn set_reference() {
         I2cTransaction::write(ADDR, vec![0x03, 0b0000000_1, 0x00]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_internal_reference(InternalReference::Enabled)
         .expect("Shouldn't panic on turning reference on");
 
@@ -184,7 +184,7 @@ fn read_power_state() {
         I2cTransaction::write_read(ADDR, vec![0b0000_0011 as u8], vec![0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let power = d12
         .get_power_state()
@@ -206,7 +206,7 @@ fn set_powerdown() {
         I2cTransaction::write(ADDR, vec![0x03, 0x00, 0b0000000_1]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_power_state(PowerState::On)
         .expect("Shouldn't panic on turning dac on");
 
@@ -224,7 +224,7 @@ fn read_reference_divider() {
         I2cTransaction::write_read(ADDR, vec![0b0000_0100 as u8], vec![0x01, 0x00]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let divider = d12
         .get_reference_divider()
@@ -247,7 +247,7 @@ fn set_reference_divider() {
         I2cTransaction::write(ADDR, vec![0x04, 0b0000000_1, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_reference_divider(ReferenceDivider::None)
         .expect("Shouldn't panic on changing reference divider");
 
@@ -264,7 +264,7 @@ fn read_buffer_gain() {
         I2cTransaction::write_read(ADDR, vec![0b0000_0100 as u8], vec![0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let gain = d12.get_output_gain().expect("Shouldn't panic reading gain");
     assert_eq!(gain, BufferGain::None);
@@ -283,7 +283,7 @@ fn set_buffer_gain() {
         I2cTransaction::write(ADDR, vec![0x04, 0x00, 0b0000000_1]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_output_gain(BufferGain::None)
         .expect("Shouldn't panic on changing buffer gain");
 
@@ -298,7 +298,7 @@ fn set_buffer_gain() {
 fn set_load_dac() {
     let expectations = [I2cTransaction::write(ADDR, vec![0x05, 0x00, 0b000_1_0000])];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     d12.set_load_dac()
         .expect("Triggering load should not panic");
@@ -309,7 +309,7 @@ fn set_load_dac() {
 fn set_soft_reset() {
     let expectations = [I2cTransaction::write(ADDR, vec![0x05, 0x00, 0b000_1010])];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     d12.soft_reset().expect("Soft reset should not panic");
     i2c.done();
@@ -323,15 +323,15 @@ fn read_alarm() {
         I2cTransaction::write_read(ADDR, vec![0b0000_0111 as u8], vec![0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let alarm = d12
-        .ref_alarm_status()
+        .get_alarm_status()
         .expect("Should not panic fetching alarm");
     assert_eq!(alarm, AlarmStatus::Normal);
 
     let alarm = d12
-        .ref_alarm_status()
+        .get_alarm_status()
         .expect("Should not panic fetching alarm");
     assert_eq!(alarm, AlarmStatus::Alarm);
 
@@ -343,7 +343,7 @@ fn read_alarm() {
 fn set_output_0() {
     let expectations = [I2cTransaction::write(ADDR, vec![0x08, 0x00, 0x00])];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_output_level(0 as u16)
         .expect("Shouldn't panic on setting dac to 0 output");
 
@@ -354,7 +354,7 @@ fn set_output_0() {
 fn set_output_max_err() {
     let expectations = [];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     assert_matches!(
         d12.set_output_level(u16::MAX),
@@ -368,7 +368,7 @@ fn set_output_max_err() {
 fn set_output_max() {
     let expectations = [I2cTransaction::write(ADDR, vec![0x08, 0xFF, 0xFF])];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d16 = dacx0501::Dac80501I2c::new(&mut i2c, ADDR);
+    let mut d16 = dacx0501::Dac80501::new_i2c(&mut i2c, ADDR);
 
     assert_matches!(d16.set_output_level(u16::MAX), Ok(()));
 
@@ -379,7 +379,7 @@ fn set_output_max() {
 fn set_output_mid_scale() {
     let expectations = [I2cTransaction::write(ADDR, vec![0x08, 0x80, 0x00])];
     let mut i2c = I2cMock::new(&expectations);
-    let mut d12 = dacx0501::Dac60501I2c::new(&mut i2c, ADDR);
+    let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     d12.set_output_level(2048)
         .expect("Setting to mid scale should not panic");
