@@ -46,7 +46,7 @@ pub enum Register {
 
 /// DAC Configuration
 #[derive(Default)]
-struct DACConfig {
+struct DacConfig {
     dac_power: PowerState,
     ref_power: InternalReference,
     ref_divider: ReferenceDivider,
@@ -185,36 +185,36 @@ impl<I2C: I2c> Interface for I2cInterface<I2C> {
 }
 
 /// Generic DAC. Use [`Dac80501`], [`Dac70501`] or [`Dac60501`] for the specific DACs rather than instantiating this directly
-pub struct DAC<I, const BITS: u8> {
+pub struct Dac<I, const BITS: u8> {
     interface: I,
-    config: DACConfig,
+    config: DacConfig,
 }
 
-impl<SPI: SpiDevice, const BITS: u8> DAC<SpiInterface<SPI>, BITS> {
+impl<SPI: SpiDevice, const BITS: u8> Dac<SpiInterface<SPI>, BITS> {
     /// Creates a new instance of the specified dac with the internal state set to match
     /// the device defaults using an SPI interface
     pub fn new_spi(spi: SPI) -> Self {
         Self {
             interface: SpiInterface { spi },
-            config: DACConfig::default(),
+            config: DacConfig::default(),
         }
     }
 }
 
 /// Dac80501, 16 bit DAC,
-pub type Dac80501<I> = DAC<I, 16>;
+pub type Dac80501<I> = Dac<I, 16>;
 /// Dac70501, 14 bit DAC
-pub type Dac70501<I> = DAC<I, 14>;
+pub type Dac70501<I> = Dac<I, 14>;
 /// Dac60501, 12 bit DAC
-pub type Dac60501<I> = DAC<I, 12>;
+pub type Dac60501<I> = Dac<I, 12>;
 
-impl<I2C: I2c, const BITS: u8> DAC<I2cInterface<I2C>, BITS> {
+impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     /// Creates a new instance of the specified dac with the internal state set to match
     /// the device defaults using an I2C interface
     pub fn new_i2c(i2c: I2C, address: u8) -> Self {
         Self {
             interface: I2cInterface { i2c, address },
-            config: DACConfig::default(),
+            config: DacConfig::default(),
         }
     }
 
@@ -315,7 +315,7 @@ impl<I2C: I2c, const BITS: u8> DAC<I2cInterface<I2C>, BITS> {
     }
 }
 
-impl<I, const BITS: u8> DAC<I, BITS>
+impl<I, const BITS: u8> Dac<I, BITS>
 where
     I: Interface,
 {
@@ -401,7 +401,7 @@ where
         self.interface
             .write_register(Register::TRIGGER, [0x00, 0b0000_1010])?;
         // Reset internal state ONLY if write was successful.
-        self.config = DACConfig::default();
+        self.config = DacConfig::default();
         Ok(())
     }
 
