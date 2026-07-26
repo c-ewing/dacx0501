@@ -59,9 +59,9 @@ struct DACConfig {
 pub enum PowerState {
     /// Normal operation
     #[default]
-    On,
+    On = 0,
     /// Power down, output connected to ground
-    Down,
+    Down = 1,
 }
 
 /// Output buffer gain.
@@ -69,10 +69,10 @@ pub enum PowerState {
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BufferGain {
     /// The output voltage of the device is [0 .. VREF]
-    None,
+    None = 0,
     /// The output voltage of the device is [0 .. 2*VREF]
     #[default]
-    Two,
+    Two = 1,
 }
 
 /// DAC reference divider which applies to both internal and external reference sources.
@@ -81,9 +81,9 @@ pub enum BufferGain {
 pub enum ReferenceDivider {
     /// The reference voltage is not modified
     #[default]
-    None,
+    None = 0,
     /// The reference voltage is divided by 2
-    Two,
+    Two = 1,
 }
 
 /// Status of the internal reference.
@@ -92,9 +92,9 @@ pub enum ReferenceDivider {
 pub enum InternalReference {
     /// The device internal reference is enabled
     #[default]
-    Enabled,
+    Enabled = 0,
     /// The device internal reference is disabled. External reference must be provided.
-    Disabled,
+    Disabled = 1,
 }
 
 /// Synchronous (triggered), or asynchronous (continuous) output of a value loaded into the DACDATA register.
@@ -104,18 +104,18 @@ pub enum InternalReference {
 pub enum Mode {
     /// The device internal reference is enabled
     #[default]
-    Asynchronous,
+    Asynchronous = 0,
     /// The device internal reference is disabled. External reference must be provided.
-    Synchronous,
+    Synchronous = 1,
 }
 
 /// Reset value of the DAC output on power on reset.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ResetValue {
     /// DAC output is 0 volts
-    Zero,
+    Zero = 0,
     /// DAC output is mid scale
-    MidScale,
+    MidScale = 1,
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -124,9 +124,9 @@ pub enum ResetValue {
 /// Power on value is [`AlarmStatus::Normal`]
 pub enum AlarmStatus {
     /// Not enough headroom, reference buffer shutdown. DAC outputs 0 volts.
-    Alarm,
+    Alarm = 0,
     /// Normal operation
-    Normal,
+    Normal = 1,
 }
 
 #[derive(Debug)]
