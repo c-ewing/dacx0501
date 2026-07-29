@@ -7,7 +7,7 @@ use crate::{
     ReferenceDivider, Register, ResetValue,
 };
 
-// Generic interface implementation. Allows the device to be setup using either SPI or I2C with the
+/// Generic interface implementation. Allows the device to be setup using either SPI or I2C with the
 /// same API.
 /// Uses `async fn` in a public trait. Intended for use with single threaded async executors (embassy)
 /// Therefore no `Send` bound is needed on the futures.
