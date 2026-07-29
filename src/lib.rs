@@ -8,6 +8,9 @@
     html_logo_url = "https://www.ti.com/content/dam/ticom/images/products/package/d/dqf0008a.png"
 )]
 
+/// Async feature support
+pub mod asynch;
+
 use core::fmt;
 
 use embedded_hal::i2c::I2c;
