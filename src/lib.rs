@@ -9,6 +9,7 @@
 )]
 
 /// Async feature support
+#[cfg(feature = "async")]
 pub mod asynch;
 #[cfg(feature = "async")]
 pub use asynch::Dac60501 as AsyncDac60501;
