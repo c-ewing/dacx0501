@@ -131,10 +131,10 @@ pub enum ResetValue {
 /// Upon supply exceeding the analog threshold DAC output returns to normal operation with the output code unaffected.
 /// Power on value is [`AlarmStatus::Normal`]
 pub enum AlarmStatus {
-    /// Not enough headroom, reference buffer shutdown. DAC outputs 0 volts.
-    Alarm = 0,
     /// Normal operation
-    Normal = 1,
+    Normal = 0,
+    /// Not enough headroom, reference buffer shutdown. DAC outputs 0 volts.
+    Alarm = 1,
 }
 
 #[derive(Debug)]
