@@ -8,6 +8,16 @@
     html_logo_url = "https://www.ti.com/content/dam/ticom/images/products/package/d/dqf0008a.png"
 )]
 
+/// Async feature support
+#[cfg(feature = "async")]
+pub mod asynch;
+#[cfg(feature = "async")]
+pub use asynch::Dac60501 as AsyncDac60501;
+#[cfg(feature = "async")]
+pub use asynch::Dac70501 as AsyncDac70501;
+#[cfg(feature = "async")]
+pub use asynch::Dac80501 as AsyncDac80501;
+
 use core::fmt;
 
 use embedded_hal::i2c::I2c;
