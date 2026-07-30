@@ -140,8 +140,8 @@ pub enum AlarmStatus {
     Alarm = 1,
 }
 
-#[derive(Debug)]
 /// The custom error for this crate
+#[derive(Debug)]
 pub enum DacError<E> {
     /// The value for the specified DAC overflowed
     ValueOverflow,
@@ -156,6 +156,16 @@ impl<E: fmt::Debug> fmt::Display for DacError<E> {
             Self::ValueOverflow => write!(f, "The data value was too large for the selected DAC"),
             Self::UnknownValue => write!(f, "Unknown value for register"),
             Self::InterfaceError(e) => write!(f, "Interface error: {:?}", e),
+        }
+    }
+}
+
+impl<E: fmt::Debug + core::error::Error + 'static> core::error::Error for DacError<E> {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+        match self {
+            Self::ValueOverflow => None,
+            Self::UnknownValue => None,
+            Self::InterfaceError(e) => Some(e),
         }
     }
 }
