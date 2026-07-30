@@ -7,6 +7,7 @@ use dacx0501::InternalReference;
 use dacx0501::Mode;
 use dacx0501::PowerState;
 use dacx0501::ReferenceDivider;
+use dacx0501::Register;
 use dacx0501::ResetValue;
 use dacx0501::{self};
 use embedded_hal_mock::eh1::i2c::{Mock as I2cMock, Transaction as I2cTransaction};
@@ -43,7 +44,10 @@ fn construction_12() {
 // NOOP Register
 #[test]
 fn set_noop() {
-    let expectations = [I2cTransaction::write(ADDR, vec![0x00, 0x00, 0x00])];
+    let expectations = [I2cTransaction::write(
+        ADDR,
+        vec![Register::NOOP as u8, 0x00, 0x00],
+    )];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
@@ -55,9 +59,9 @@ fn set_noop() {
 #[test]
 fn read_resolution() {
     let expectations = [
-        I2cTransaction::write_read(ADDR, vec![0b0000_0001 as u8], vec![0b0_000_0001, 0x00]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0001 as u8], vec![0b0_001_0001, 0x00]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0001 as u8], vec![0b0_010_0001, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0b0_000_0001, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0b0_001_0001, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0b0_010_0001, 0x00]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -83,8 +87,8 @@ fn read_resolution() {
 #[test]
 fn read_reset_value() {
     let expectations = [
-        I2cTransaction::write_read(ADDR, vec![0b0000_0001 as u8], vec![0x00, 0b0_0010101]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0001 as u8], vec![0x00, 0b1_0010101]),
+        I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0x00, 0b0_0010101]),
+        I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0x00, 0b1_0010101]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -106,8 +110,8 @@ fn read_reset_value() {
 #[test]
 fn read_sync() {
     let expectations = [
-        I2cTransaction::write_read(ADDR, vec![0b0000_0010 as u8], vec![0x00, 0x00]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0010 as u8], vec![0x00, 0x01]),
+        I2cTransaction::write_read(ADDR, vec![Register::SYNC as u8], vec![0x00, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::SYNC as u8], vec![0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -124,8 +128,8 @@ fn read_sync() {
 #[test]
 fn set_sync() {
     let expectations = [
-        I2cTransaction::write(ADDR, vec![0x02, 0x00, 0x00]),
-        I2cTransaction::write(ADDR, vec![0x02, 0x00, 0x01]),
+        I2cTransaction::write(ADDR, vec![Register::SYNC as u8, 0x00, 0x00]),
+        I2cTransaction::write(ADDR, vec![Register::SYNC as u8, 0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -141,8 +145,8 @@ fn set_sync() {
 #[test]
 fn read_reference() {
     let expectations = [
-        I2cTransaction::write_read(ADDR, vec![0b0000_0011 as u8], vec![0x00, 0x00]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0011 as u8], vec![0x01, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::CONFIG as u8], vec![0x00, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::CONFIG as u8], vec![0x01, 0x00]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -163,8 +167,8 @@ fn read_reference() {
 #[test]
 fn set_reference() {
     let expectations = [
-        I2cTransaction::write(ADDR, vec![0x03, 0b0000000_0, 0x00]),
-        I2cTransaction::write(ADDR, vec![0x03, 0b0000000_1, 0x00]),
+        I2cTransaction::write(ADDR, vec![Register::CONFIG as u8, 0b0000000_0, 0x00]),
+        I2cTransaction::write(ADDR, vec![Register::CONFIG as u8, 0b0000000_1, 0x00]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -180,8 +184,8 @@ fn set_reference() {
 #[test]
 fn read_power_state() {
     let expectations = [
-        I2cTransaction::write_read(ADDR, vec![0b0000_0011 as u8], vec![0x00, 0x00]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0011 as u8], vec![0x00, 0x01]),
+        I2cTransaction::write_read(ADDR, vec![Register::CONFIG as u8], vec![0x00, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::CONFIG as u8], vec![0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -202,8 +206,8 @@ fn read_power_state() {
 #[test]
 fn set_powerdown() {
     let expectations = [
-        I2cTransaction::write(ADDR, vec![0x03, 0x00, 0b0000000_0]),
-        I2cTransaction::write(ADDR, vec![0x03, 0x00, 0b0000000_1]),
+        I2cTransaction::write(ADDR, vec![Register::CONFIG as u8, 0x00, 0b0000000_0]),
+        I2cTransaction::write(ADDR, vec![Register::CONFIG as u8, 0x00, 0b0000000_1]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -220,8 +224,8 @@ fn set_powerdown() {
 #[test]
 fn read_reference_divider() {
     let expectations = [
-        I2cTransaction::write_read(ADDR, vec![0b0000_0100 as u8], vec![0x00, 0x00]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0100 as u8], vec![0x01, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::GAIN as u8], vec![0x00, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::GAIN as u8], vec![0x01, 0x00]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -243,8 +247,8 @@ fn read_reference_divider() {
 fn set_reference_divider() {
     // NOTE: Default value of BUFF-GAIN bit is 1
     let expectations = [
-        I2cTransaction::write(ADDR, vec![0x04, 0b0000000_0, 0x01]),
-        I2cTransaction::write(ADDR, vec![0x04, 0b0000000_1, 0x01]),
+        I2cTransaction::write(ADDR, vec![Register::GAIN as u8, 0b0000000_0, 0x01]),
+        I2cTransaction::write(ADDR, vec![Register::GAIN as u8, 0b0000000_1, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -260,8 +264,8 @@ fn set_reference_divider() {
 #[test]
 fn read_buffer_gain() {
     let expectations = [
-        I2cTransaction::write_read(ADDR, vec![0b0000_0100 as u8], vec![0x00, 0x00]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0100 as u8], vec![0x00, 0x01]),
+        I2cTransaction::write_read(ADDR, vec![Register::GAIN as u8], vec![0x00, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::GAIN as u8], vec![0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -279,8 +283,8 @@ fn read_buffer_gain() {
 fn set_buffer_gain() {
     // NOTE: Default value of BUFF-GAIN bit is 1
     let expectations = [
-        I2cTransaction::write(ADDR, vec![0x04, 0x00, 0b0000000_0]),
-        I2cTransaction::write(ADDR, vec![0x04, 0x00, 0b0000000_1]),
+        I2cTransaction::write(ADDR, vec![Register::GAIN as u8, 0x00, 0b0000000_0]),
+        I2cTransaction::write(ADDR, vec![Register::GAIN as u8, 0x00, 0b0000000_1]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -296,7 +300,10 @@ fn set_buffer_gain() {
 // TRIGGER Register
 #[test]
 fn set_load_dac() {
-    let expectations = [I2cTransaction::write(ADDR, vec![0x05, 0x00, 0b000_1_0000])];
+    let expectations = [I2cTransaction::write(
+        ADDR,
+        vec![Register::TRIGGER as u8, 0x00, 0b000_1_0000],
+    )];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
@@ -307,7 +314,10 @@ fn set_load_dac() {
 
 #[test]
 fn set_soft_reset() {
-    let expectations = [I2cTransaction::write(ADDR, vec![0x05, 0x00, 0b000_1010])];
+    let expectations = [I2cTransaction::write(
+        ADDR,
+        vec![Register::TRIGGER as u8, 0x00, 0b000_1010],
+    )];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
@@ -319,8 +329,8 @@ fn set_soft_reset() {
 #[test]
 fn read_alarm() {
     let expectations = [
-        I2cTransaction::write_read(ADDR, vec![0b0000_0111 as u8], vec![0x00, 0x00]),
-        I2cTransaction::write_read(ADDR, vec![0b0000_0111 as u8], vec![0x00, 0x01]),
+        I2cTransaction::write_read(ADDR, vec![Register::STATUS as u8], vec![0x00, 0x00]),
+        I2cTransaction::write_read(ADDR, vec![Register::STATUS as u8], vec![0x00, 0x01]),
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -341,7 +351,10 @@ fn read_alarm() {
 // DAC Register
 #[test]
 fn set_output_0() {
-    let expectations = [I2cTransaction::write(ADDR, vec![0x08, 0x00, 0x00])];
+    let expectations = [I2cTransaction::write(
+        ADDR,
+        vec![Register::DACDATA as u8, 0x00, 0x00],
+    )];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_output_level(0 as u16)
@@ -366,7 +379,10 @@ fn set_output_max_err() {
 
 #[test]
 fn set_output_max() {
-    let expectations = [I2cTransaction::write(ADDR, vec![0x08, 0xFF, 0xFF])];
+    let expectations = [I2cTransaction::write(
+        ADDR,
+        vec![Register::DACDATA as u8, 0xFF, 0xFF],
+    )];
     let mut i2c = I2cMock::new(&expectations);
     let mut d16 = dacx0501::Dac80501::new_i2c(&mut i2c, ADDR);
 
@@ -377,7 +393,10 @@ fn set_output_max() {
 
 #[test]
 fn set_output_mid_scale() {
-    let expectations = [I2cTransaction::write(ADDR, vec![0x08, 0x80, 0x00])];
+    let expectations = [I2cTransaction::write(
+        ADDR,
+        vec![Register::DACDATA as u8, 0x80, 0x00],
+    )];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
@@ -391,7 +410,7 @@ fn set_output_mid_scale() {
 fn read_output_level_12() {
     let expectations = [I2cTransaction::write_read(
         ADDR,
-        vec![0b0000_1000 as u8],
+        vec![Register::DACDATA as u8],
         vec![0x80, 0x00],
     )];
     let mut i2c = I2cMock::new(&expectations);
@@ -409,7 +428,7 @@ fn read_output_level_12() {
 fn read_output_level_16() {
     let expectations = [I2cTransaction::write_read(
         ADDR,
-        vec![0b0000_1000 as u8],
+        vec![Register::DACDATA as u8],
         vec![0x80, 0x00],
     )];
     let mut i2c = I2cMock::new(&expectations);
