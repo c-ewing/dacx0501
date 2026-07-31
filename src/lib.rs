@@ -8,20 +8,17 @@
     html_logo_url = "https://www.ti.com/content/dam/ticom/images/products/package/d/dqf0008a.png"
 )]
 
-/// Async feature support
-#[cfg(feature = "async")]
-pub mod asynch;
-#[cfg(feature = "async")]
-pub use asynch::Dac60501 as AsyncDac60501;
-#[cfg(feature = "async")]
-pub use asynch::Dac70501 as AsyncDac70501;
-#[cfg(feature = "async")]
-pub use asynch::Dac80501 as AsyncDac80501;
-
 use core::fmt;
 
-use embedded_hal::i2c::I2c;
-use embedded_hal::spi::SpiDevice;
+#[cfg(feature = "sync")]
+use embedded_hal::i2c::I2c as I2cSync;
+#[cfg(feature = "sync")]
+use embedded_hal::spi::SpiDevice as SpiDeviceSync;
+
+#[cfg(feature = "async")]
+use embedded_hal_async::i2c::I2c as I2cAsync;
+#[cfg(feature = "async")]
+use embedded_hal_async::spi::SpiDevice as SpiDeviceAsync;
 
 /// Register byte. first byte of the transfer to the DAC
 // B23 B22 B21 B20 B19 B18 B17 B16 REGISTER     HEX
@@ -162,48 +159,82 @@ impl<E: fmt::Debug> fmt::Display for DacError<E> {
 
 /// Generic interface implementation. Allows the device to be setup using either SPI or I2C with the
 /// same API.
+///
+#[allow(async_fn_in_trait)]
+#[maybe_async_cfg::maybe(idents(Interface), sync(feature = "sync"), async(feature = "async"))]
 pub trait Interface {
     /// Error type, Either SpiError or I2cError
     type Error;
     /// Write to a register, data is ordered high:low
-    fn write_register(&mut self, c: Register, data: [u8; 2]) -> Result<(), DacError<Self::Error>>;
+    async fn write_register(
+        &mut self,
+        c: Register,
+        data: [u8; 2],
+    ) -> Result<(), DacError<Self::Error>>;
 }
 
 /// Wrapper over an SPI interface, holding the embedded-hal spi data
+#[maybe_async_cfg::maybe(idents(SpiInterface), sync(feature = "sync"), async(feature = "async"))]
 pub struct SpiInterface<SPI> {
     spi: SPI,
 }
+#[maybe_async_cfg::maybe(
+    idents(SpiDevice, Interface, SpiInterface),
+    sync(feature = "sync"),
+    async(feature = "async")
+)]
 impl<SPI: SpiDevice> Interface for SpiInterface<SPI> {
     type Error = SPI::Error;
 
-    fn write_register(&mut self, c: Register, data: [u8; 2]) -> Result<(), DacError<SPI::Error>> {
+    async fn write_register(
+        &mut self,
+        c: Register,
+        data: [u8; 2],
+    ) -> Result<(), DacError<SPI::Error>> {
         self.spi
             .write(&[c as u8, data[0], data[1]])
+            .await
             .map_err(DacError::InterfaceError)
     }
 }
 
 /// Wrapper over an I2C interface, holding the embedded-hal i2c data and the device address
+#[maybe_async_cfg::maybe(idents(I2cInterface), sync(feature = "sync"), async(feature = "async"))]
 pub struct I2cInterface<I2C> {
     i2c: I2C,
     address: u8,
 }
+#[maybe_async_cfg::maybe(
+    idents(I2c, Interface, I2cInterface),
+    sync(feature = "sync"),
+    async(feature = "async")
+)]
 impl<I2C: I2c> Interface for I2cInterface<I2C> {
     type Error = I2C::Error;
 
-    fn write_register(&mut self, c: Register, data: [u8; 2]) -> Result<(), DacError<Self::Error>> {
+    async fn write_register(
+        &mut self,
+        c: Register,
+        data: [u8; 2],
+    ) -> Result<(), DacError<Self::Error>> {
         self.i2c
             .write(self.address, &[c as u8, data[0], data[1]])
+            .await
             .map_err(DacError::InterfaceError)
     }
 }
 
 /// Generic DAC. Use [`Dac80501`], [`Dac70501`] or [`Dac60501`] for the specific DACs rather than instantiating this directly
+#[maybe_async_cfg::maybe(idents(Dac), sync(feature = "sync"), async(feature = "async"))]
 pub struct Dac<I, const BITS: u8> {
     interface: I,
     config: DacConfig,
 }
-
+#[maybe_async_cfg::maybe(
+    idents(SpiDevice, Dac, SpiInterface),
+    sync(feature = "sync"),
+    async(feature = "async")
+)]
 impl<SPI: SpiDevice, const BITS: u8> Dac<SpiInterface<SPI>, BITS> {
     /// Creates a new instance of the specified dac with the internal state set to match
     /// the device defaults using an SPI interface
@@ -215,13 +246,11 @@ impl<SPI: SpiDevice, const BITS: u8> Dac<SpiInterface<SPI>, BITS> {
     }
 }
 
-/// Dac80501, 16 bit DAC,
-pub type Dac80501<I> = Dac<I, 16>;
-/// Dac70501, 14 bit DAC
-pub type Dac70501<I> = Dac<I, 14>;
-/// Dac60501, 12 bit DAC
-pub type Dac60501<I> = Dac<I, 12>;
-
+#[maybe_async_cfg::maybe(
+    idents(I2c, Dac, I2cInterface),
+    sync(feature = "sync"),
+    async(feature = "async")
+)]
 impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     /// Creates a new instance of the specified dac with the internal state set to match
     /// the device defaults using an I2C interface
@@ -232,18 +261,19 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         }
     }
 
-    fn read_register(&mut self, c: Register) -> Result<[u8; 2], DacError<I2C::Error>> {
+    async fn read_register(&mut self, c: Register) -> Result<[u8; 2], DacError<I2C::Error>> {
         let mut buf = [0u8; 2];
         self.interface
             .i2c
             .write_read(self.interface.address, &[c as u8], &mut buf)
+            .await
             .map_err(DacError::InterfaceError)?;
         Ok(buf)
     }
 
     /// Returns the resolution of the device in bits
-    pub fn get_resolution(&mut self) -> Result<u8, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::DEVID)?;
+    pub async fn get_resolution(&mut self) -> Result<u8, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::DEVID).await?;
         match buf[0] >> 4 {
             0b000 => Ok(16),
             0b001 => Ok(14),
@@ -253,8 +283,8 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the power on reset value of the DAC
-    pub fn get_reset_value(&mut self) -> Result<ResetValue, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::DEVID)?;
+    pub async fn get_reset_value(&mut self) -> Result<ResetValue, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::DEVID).await?;
         match buf[1] >> 7 {
             0b00 => Ok(ResetValue::Zero),
             0b01 => Ok(ResetValue::MidScale),
@@ -263,8 +293,8 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns whether the device is in synchronous or asynchronous mode
-    pub fn get_synchronous(&mut self) -> Result<Mode, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::SYNC)?;
+    pub async fn get_synchronous(&mut self) -> Result<Mode, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::SYNC).await?;
         match buf[1] & 0b0000000_1 {
             0b0 => Ok(Mode::Asynchronous),
             0b1 => Ok(Mode::Synchronous),
@@ -273,8 +303,10 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the whether the internal reference is enabled or disabled
-    pub fn get_internal_reference(&mut self) -> Result<InternalReference, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::CONFIG)?;
+    pub async fn get_internal_reference(
+        &mut self,
+    ) -> Result<InternalReference, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::CONFIG).await?;
         match buf[0] & 0b0000000_1 {
             0b0 => Ok(InternalReference::Enabled),
             0b1 => Ok(InternalReference::Disabled),
@@ -283,8 +315,8 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the DAC power state, on or down
-    pub fn get_power_state(&mut self) -> Result<PowerState, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::CONFIG)?;
+    pub async fn get_power_state(&mut self) -> Result<PowerState, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::CONFIG).await?;
         match buf[1] & 0b0000000_1 {
             0b0 => Ok(PowerState::On),
             0b1 => Ok(PowerState::Down),
@@ -293,8 +325,10 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the status of the reference divider, either no reference division or divide by two
-    pub fn get_reference_divider(&mut self) -> Result<ReferenceDivider, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::GAIN)?;
+    pub async fn get_reference_divider(
+        &mut self,
+    ) -> Result<ReferenceDivider, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::GAIN).await?;
         match buf[0] & 0b0000000_1 {
             0b0 => Ok(ReferenceDivider::None),
             0b1 => Ok(ReferenceDivider::Two),
@@ -303,8 +337,8 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the output buffer gain either no gain or two times gain
-    pub fn get_output_gain(&mut self) -> Result<BufferGain, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::GAIN)?;
+    pub async fn get_output_gain(&mut self) -> Result<BufferGain, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::GAIN).await?;
         match buf[1] & 0b0000000_1 {
             0b0 => Ok(BufferGain::None),
             0b1 => Ok(BufferGain::Two),
@@ -313,8 +347,8 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns reference alarm status. Alarm occurs when supply is below what is required to output the maximum output voltage.
-    pub fn get_alarm_status(&mut self) -> Result<AlarmStatus, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::STATUS)?;
+    pub async fn get_alarm_status(&mut self) -> Result<AlarmStatus, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::STATUS).await?;
         match buf[1] & 0b0000000_1 {
             0b0 => Ok(AlarmStatus::Normal),
             0b1 => Ok(AlarmStatus::Alarm),
@@ -323,12 +357,17 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the current output level of the DAC
-    pub fn get_output_level(&mut self) -> Result<u16, DacError<I2C::Error>> {
-        let buf = self.read_register(Register::DACDATA)?;
+    pub async fn get_output_level(&mut self) -> Result<u16, DacError<I2C::Error>> {
+        let buf = self.read_register(Register::DACDATA).await?;
         Ok(u16::from_be_bytes(buf) >> (Self::REGISTER_WIDTH - BITS))
     }
 }
 
+#[maybe_async_cfg::maybe(
+    idents(Dac, Interface),
+    sync(feature = "sync"),
+    async(feature = "async")
+)]
 impl<I, const BITS: u8> Dac<I, BITS>
 where
     I: Interface,
@@ -338,25 +377,30 @@ where
     const REGISTER_WIDTH: u8 = 16;
 
     /// Write to the NOOP register, has no effects
-    pub fn set_noop(&mut self) -> Result<(), DacError<I::Error>> {
-        self.interface.write_register(Register::NOOP, [0x00, 0x00])
+    pub async fn set_noop(&mut self) -> Result<(), DacError<I::Error>> {
+        self.interface
+            .write_register(Register::NOOP, [0x00, 0x00])
+            .await
     }
 
     /// Set whether the DAC is triggered by load DAC or if it is set to update immediately
-    pub fn set_synchronous(&mut self, mode: Mode) -> Result<(), DacError<I::Error>> {
+    pub async fn set_synchronous(&mut self, mode: Mode) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::SYNC, [0x00, mode as u8])
+            .await
     }
 
     /// Enables and disables the device internal reference. The internal reference is on by default
-    pub fn set_internal_reference(
+    pub async fn set_internal_reference(
         &mut self,
         intern_ref: InternalReference,
     ) -> Result<(), DacError<I::Error>> {
-        self.interface.write_register(
-            Register::CONFIG,
-            [intern_ref as u8, self.config.dac_power as u8],
-        )?;
+        self.interface
+            .write_register(
+                Register::CONFIG,
+                [intern_ref as u8, self.config.dac_power as u8],
+            )
+            .await?;
         self.config.ref_power = intern_ref;
         Ok(())
     }
@@ -364,9 +408,10 @@ where
     /// In power-off state the device output is connected to GND through a 1-kΩ internal
     /// resistor. The device is in power `On` state by default. This reduces current
     /// consumption to typically 15 µA at 5 V.
-    pub fn set_power_state(&mut self, state: PowerState) -> Result<(), DacError<I::Error>> {
+    pub async fn set_power_state(&mut self, state: PowerState) -> Result<(), DacError<I::Error>> {
         self.interface
-            .write_register(Register::CONFIG, [self.config.ref_power as u8, state as u8])?;
+            .write_register(Register::CONFIG, [self.config.ref_power as u8, state as u8])
+            .await?;
         self.config.dac_power = state;
         Ok(())
     }
@@ -381,14 +426,16 @@ where
     /// divider is configured correctly. When the reference divider is set to `Half`, the reference
     /// voltage is internally divided by a factor of 2. The reference divider is set to `OneX` by
     /// default
-    pub fn set_reference_divider(
+    pub async fn set_reference_divider(
         &mut self,
         ref_div: ReferenceDivider,
     ) -> Result<(), DacError<I::Error>> {
-        self.interface.write_register(
-            Register::GAIN,
-            [ref_div as u8, self.config.buffer_gain as u8],
-        )?;
+        self.interface
+            .write_register(
+                Register::GAIN,
+                [ref_div as u8, self.config.buffer_gain as u8],
+            )
+            .await?;
         self.config.ref_divider = ref_div;
         Ok(())
     }
@@ -397,29 +444,32 @@ where
     /// voltage output. When set to `OneX` it has a gain of 1x. Using this gain can be
     /// especially useful when using the internal reference divider set to `Half`. The
     /// output gain is set to `TwoX` by default
-    pub fn set_output_gain(&mut self, gain: BufferGain) -> Result<(), DacError<I::Error>> {
+    pub async fn set_output_gain(&mut self, gain: BufferGain) -> Result<(), DacError<I::Error>> {
         self.interface
-            .write_register(Register::GAIN, [self.config.ref_divider as u8, gain as u8])?;
+            .write_register(Register::GAIN, [self.config.ref_divider as u8, gain as u8])
+            .await?;
         self.config.buffer_gain = gain;
         Ok(())
     }
 
     /// Trigger synchronous load. Self resetting after load is completed. No effect for asynchronous operation.
-    pub fn set_load_dac(&mut self) -> Result<(), DacError<I::Error>> {
+    pub async fn set_load_dac(&mut self) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::TRIGGER, [0x00, 0b000_1_0000])
+            .await
     }
 
     /// Soft reset, reset device to power on defaults.
-    pub fn soft_reset(&mut self) -> Result<(), DacError<I::Error>> {
+    pub async fn soft_reset(&mut self) -> Result<(), DacError<I::Error>> {
         self.interface
-            .write_register(Register::TRIGGER, [0x00, 0b0000_1010])?;
+            .write_register(Register::TRIGGER, [0x00, 0b0000_1010])
+            .await?;
         self.config = DacConfig::default();
         Ok(())
     }
 
     /// Set the output voltage of the device and check the level bounds for the specified device
-    pub fn set_output_level(&mut self, level: u16) -> Result<(), DacError<I::Error>> {
+    pub async fn set_output_level(&mut self, level: u16) -> Result<(), DacError<I::Error>> {
         // Shifts to ensure level is not out of range for the number of bits the DAC has.
         // Check should be optimized out in the case of a 16bit DAC
         if level.checked_shr(BITS as u32).unwrap_or(0) != 0 {
@@ -427,13 +477,40 @@ where
         }
 
         let bytes: [u8; 2] = (level << (Self::REGISTER_WIDTH - BITS)).to_be_bytes();
-        self.interface.write_register(Register::DACDATA, bytes)
+        self.interface
+            .write_register(Register::DACDATA, bytes)
+            .await
     }
 
     /// This function sets the output level without checking the bounds on the size of the
     /// value for the specified DAC
-    pub fn set_output_level_unchecked(&mut self, level: u16) -> Result<(), DacError<I::Error>> {
+    pub async fn set_output_level_unchecked(
+        &mut self,
+        level: u16,
+    ) -> Result<(), DacError<I::Error>> {
         let bytes: [u8; 2] = (level << (Self::REGISTER_WIDTH - BITS)).to_be_bytes();
-        self.interface.write_register(Register::DACDATA, bytes)
+        self.interface
+            .write_register(Register::DACDATA, bytes)
+            .await
     }
 }
+
+#[cfg(feature = "sync")]
+/// DAC80501, 16bit dac, synchronous
+pub type Dac80501<I> = DacSync<I, 16>;
+#[cfg(feature = "sync")]
+/// DAC70501, 14bit dac, synchronous
+pub type Dac70501<I> = DacSync<I, 14>;
+#[cfg(feature = "sync")]
+/// DAC60501, 12bit dac, synchronous
+pub type Dac60501<I> = DacSync<I, 12>;
+
+#[cfg(feature = "async")]
+/// DAC80501, 16bit dac, asynchronous
+pub type AsyncDac80501<I> = DacAsync<I, 16>;
+#[cfg(feature = "async")]
+/// DAC70501, 14bit dac, asynchronous
+pub type AsyncDac70501<I> = DacAsync<I, 14>;
+#[cfg(feature = "async")]
+/// DAC60501, 12bit dac, asynchronous
+pub type AsyncDac60501<I> = DacAsync<I, 12>;
