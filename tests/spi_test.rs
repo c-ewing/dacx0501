@@ -1,4 +1,3 @@
-use std::assert_matches;
 use std::u16;
 
 use dacx0501::BufferGain;
@@ -280,7 +279,7 @@ async fn set_output_max_err() {
     let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
     let res = d12.set_output_level(u16::MAX).await;
-    assert_matches!(res, Err(dacx0501::DacError::ValueOverflow));
+    assert!(matches!(res, Err(dacx0501::DacError::ValueOverflow)));
 
     spi.done();
 }
@@ -300,7 +299,7 @@ async fn set_output_max() {
     let mut d16 = dacx0501::Dac80501::new_spi(&mut spi);
 
     let res = d16.set_output_level(u16::MAX).await;
-    assert_matches!(res, Ok(()));
+    assert!(matches!(res, Ok(())));
 
     spi.done();
 }
