@@ -11,11 +11,15 @@ repository = "https://github.com/jrmoulton/dacx0501"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-embedded-hal = "^1.0.0"
+embedded-hal = "1.0.0"
 embedded-hal-async = { version = "1.0.0", optional = true }
+maybe-async-cfg = { version = "0.2" }
 
 [dev-dependencies]
-embedded-hal-mock = { version = "0.11.1", features = ["eh1"] }
+embedded-hal-mock = { version = "0.11", features = ["eh1"] }
+tokio = { version = "1", features = ["macros", "rt"] }
 
 [features]
-async = ["dep:embedded-hal-async"]
+default = ["sync"]
+sync = []
+async = ["dep:embedded-hal-async", "embedded-hal-mock/embedded-hal-async"]

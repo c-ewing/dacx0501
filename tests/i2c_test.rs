@@ -1,4 +1,3 @@
-use std::assert_matches;
 use std::u16;
 
 use dacx0501::AlarmStatus;
@@ -14,8 +13,12 @@ use embedded_hal_mock::eh1::i2c::{Mock as I2cMock, Transaction as I2cTransaction
 
 const ADDR: u8 = 0b1001_000;
 
-#[test]
-fn construction_16() {
+#[maybe_async_cfg::maybe(
+    idents(Dac80501(sync, async = "AsyncDac80501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn construction_16() {
     let expectations = [];
     let mut i2c = I2cMock::new(&expectations);
     let _d16 = dacx0501::Dac80501::new_i2c(&mut i2c, ADDR);
@@ -23,8 +26,12 @@ fn construction_16() {
     i2c.done();
 }
 
-#[test]
-fn construction_14() {
+#[maybe_async_cfg::maybe(
+    idents(Dac70501(sync, async = "AsyncDac70501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn construction_14() {
     let expectations = [];
     let mut i2c = I2cMock::new(&expectations);
     let _d14 = dacx0501::Dac70501::new_i2c(&mut i2c, ADDR);
@@ -32,8 +39,12 @@ fn construction_14() {
     i2c.done();
 }
 
-#[test]
-fn construction_12() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn construction_12() {
     let expectations = [];
     let mut i2c = I2cMock::new(&expectations);
     let _d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
@@ -42,8 +53,12 @@ fn construction_12() {
 }
 
 // NOOP Register
-#[test]
-fn set_noop() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_noop() {
     let expectations = [I2cTransaction::write(
         ADDR,
         vec![Register::NOOP as u8, 0x00, 0x00],
@@ -51,13 +66,19 @@ fn set_noop() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    d12.set_noop().expect("Writing to noop should not panic");
+    d12.set_noop()
+        .await
+        .expect("Writing to noop should not panic");
     i2c.done();
 }
 
 // DEVID Register
-#[test]
-fn read_resolution() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_resolution() {
     let expectations = [
         I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0b0_000_0001, 0x00]),
         I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0b0_001_0001, 0x00]),
@@ -68,24 +89,31 @@ fn read_resolution() {
 
     let r = d12
         .get_resolution()
+        .await
         .expect("Reading resolution should not panic");
     assert_eq!(r, 16);
 
     let r = d12
         .get_resolution()
+        .await
         .expect("Reading resolution should not panic");
     assert_eq!(r, 14);
 
     let r = d12
         .get_resolution()
+        .await
         .expect("Reading resolution should not panic");
     assert_eq!(r, 12);
 
     i2c.done();
 }
 
-#[test]
-fn read_reset_value() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_reset_value() {
     let expectations = [
         I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0x00, 0b0_0010101]),
         I2cTransaction::write_read(ADDR, vec![Register::DEVID as u8], vec![0x00, 0b1_0010101]),
@@ -95,11 +123,13 @@ fn read_reset_value() {
 
     let reset = d12
         .get_reset_value()
+        .await
         .expect("Reading reset value should not panic");
     assert_eq!(reset, ResetValue::Zero);
 
     let reset = d12
         .get_reset_value()
+        .await
         .expect("Reading reset value should not panic");
     assert_eq!(reset, ResetValue::MidScale);
 
@@ -107,8 +137,12 @@ fn read_reset_value() {
 }
 
 // Sync Register
-#[test]
-fn read_sync() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_sync() {
     let expectations = [
         I2cTransaction::write_read(ADDR, vec![Register::SYNC as u8], vec![0x00, 0x00]),
         I2cTransaction::write_read(ADDR, vec![Register::SYNC as u8], vec![0x00, 0x01]),
@@ -116,17 +150,21 @@ fn read_sync() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    let sync = d12.get_synchronous().expect("Should not panic");
+    let sync = d12.get_synchronous().await.expect("Should not panic");
     assert_eq!(sync, Mode::Asynchronous);
 
-    let sync = d12.get_synchronous().expect("Should not panic");
+    let sync = d12.get_synchronous().await.expect("Should not panic");
     assert_eq!(sync, Mode::Synchronous);
 
     i2c.done();
 }
 
-#[test]
-fn set_sync() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_sync() {
     let expectations = [
         I2cTransaction::write(ADDR, vec![Register::SYNC as u8, 0x00, 0x00]),
         I2cTransaction::write(ADDR, vec![Register::SYNC as u8, 0x00, 0x01]),
@@ -135,15 +173,21 @@ fn set_sync() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     d12.set_synchronous(Mode::Asynchronous)
+        .await
         .expect("Should not panic setting async");
     d12.set_synchronous(Mode::Synchronous)
+        .await
         .expect("Should not panic setting sync");
     i2c.done();
 }
 
 // Config Register
-#[test]
-fn read_reference() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_reference() {
     let expectations = [
         I2cTransaction::write_read(ADDR, vec![Register::CONFIG as u8], vec![0x00, 0x00]),
         I2cTransaction::write_read(ADDR, vec![Register::CONFIG as u8], vec![0x01, 0x00]),
@@ -153,19 +197,25 @@ fn read_reference() {
 
     let reference = d12
         .get_internal_reference()
+        .await
         .expect("Reading power should not panic");
     assert_eq!(reference, InternalReference::Enabled);
 
     let reference = d12
         .get_internal_reference()
+        .await
         .expect("Reading power should not panic");
     assert_eq!(reference, InternalReference::Disabled);
 
     i2c.done();
 }
 
-#[test]
-fn set_reference() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_reference() {
     let expectations = [
         I2cTransaction::write(ADDR, vec![Register::CONFIG as u8, 0b0000000_0, 0x00]),
         I2cTransaction::write(ADDR, vec![Register::CONFIG as u8, 0b0000000_1, 0x00]),
@@ -173,16 +223,22 @@ fn set_reference() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_internal_reference(InternalReference::Enabled)
+        .await
         .expect("Shouldn't panic on turning reference on");
 
     d12.set_internal_reference(InternalReference::Disabled)
+        .await
         .expect("Shouldn't panic on turning reference off");
 
     i2c.done();
 }
 
-#[test]
-fn read_power_state() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_power_state() {
     let expectations = [
         I2cTransaction::write_read(ADDR, vec![Register::CONFIG as u8], vec![0x00, 0x00]),
         I2cTransaction::write_read(ADDR, vec![Register::CONFIG as u8], vec![0x00, 0x01]),
@@ -192,19 +248,25 @@ fn read_power_state() {
 
     let power = d12
         .get_power_state()
+        .await
         .expect("Reading power should not panic");
     assert_eq!(power, PowerState::On);
 
     let power = d12
         .get_power_state()
+        .await
         .expect("Reading power should not panic");
     assert_eq!(power, PowerState::Down);
 
     i2c.done();
 }
 
-#[test]
-fn set_powerdown() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_powerdown() {
     let expectations = [
         I2cTransaction::write(ADDR, vec![Register::CONFIG as u8, 0x00, 0b0000000_0]),
         I2cTransaction::write(ADDR, vec![Register::CONFIG as u8, 0x00, 0b0000000_1]),
@@ -212,17 +274,23 @@ fn set_powerdown() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_power_state(PowerState::On)
+        .await
         .expect("Shouldn't panic on turning dac on");
 
     d12.set_power_state(PowerState::Down)
+        .await
         .expect("Shouldn't panic on turning dac off");
 
     i2c.done();
 }
 
 // GAIN Register
-#[test]
-fn read_reference_divider() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_reference_divider() {
     let expectations = [
         I2cTransaction::write_read(ADDR, vec![Register::GAIN as u8], vec![0x00, 0x00]),
         I2cTransaction::write_read(ADDR, vec![Register::GAIN as u8], vec![0x01, 0x00]),
@@ -232,19 +300,25 @@ fn read_reference_divider() {
 
     let divider = d12
         .get_reference_divider()
+        .await
         .expect("Should not panic getting reference divider");
     assert_eq!(divider, ReferenceDivider::None);
 
     let divider = d12
         .get_reference_divider()
+        .await
         .expect("Should not panic getting reference divider");
     assert_eq!(divider, ReferenceDivider::Two);
 
     i2c.done();
 }
 
-#[test]
-fn set_reference_divider() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_reference_divider() {
     // NOTE: Default value of BUFF-GAIN bit is 1
     let expectations = [
         I2cTransaction::write(ADDR, vec![Register::GAIN as u8, 0b0000000_0, 0x01]),
@@ -253,16 +327,22 @@ fn set_reference_divider() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_reference_divider(ReferenceDivider::None)
+        .await
         .expect("Shouldn't panic on changing reference divider");
 
     d12.set_reference_divider(ReferenceDivider::Two)
+        .await
         .expect("Shouldn't panic on changing reference divider");
 
     i2c.done();
 }
 
-#[test]
-fn read_buffer_gain() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_buffer_gain() {
     let expectations = [
         I2cTransaction::write_read(ADDR, vec![Register::GAIN as u8], vec![0x00, 0x00]),
         I2cTransaction::write_read(ADDR, vec![Register::GAIN as u8], vec![0x00, 0x01]),
@@ -270,17 +350,27 @@ fn read_buffer_gain() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    let gain = d12.get_output_gain().expect("Shouldn't panic reading gain");
+    let gain = d12
+        .get_output_gain()
+        .await
+        .expect("Shouldn't panic reading gain");
     assert_eq!(gain, BufferGain::None);
 
-    let gain = d12.get_output_gain().expect("Shouldn't panic reading gain");
+    let gain = d12
+        .get_output_gain()
+        .await
+        .expect("Shouldn't panic reading gain");
     assert_eq!(gain, BufferGain::Two);
 
     i2c.done();
 }
 
-#[test]
-fn set_buffer_gain() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_buffer_gain() {
     // NOTE: Default value of BUFF-GAIN bit is 1
     let expectations = [
         I2cTransaction::write(ADDR, vec![Register::GAIN as u8, 0x00, 0b0000000_0]),
@@ -289,17 +379,23 @@ fn set_buffer_gain() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_output_gain(BufferGain::None)
+        .await
         .expect("Shouldn't panic on changing buffer gain");
 
     d12.set_output_gain(BufferGain::Two)
+        .await
         .expect("Shouldn't panic on changing buffer gain");
 
     i2c.done();
 }
 
 // TRIGGER Register
-#[test]
-fn set_load_dac() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_load_dac() {
     let expectations = [I2cTransaction::write(
         ADDR,
         vec![Register::TRIGGER as u8, 0x00, 0b000_1_0000],
@@ -308,12 +404,17 @@ fn set_load_dac() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     d12.set_load_dac()
+        .await
         .expect("Triggering load should not panic");
     i2c.done();
 }
 
-#[test]
-fn set_soft_reset() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_soft_reset() {
     let expectations = [I2cTransaction::write(
         ADDR,
         vec![Register::TRIGGER as u8, 0x00, 0b000_1010],
@@ -321,13 +422,17 @@ fn set_soft_reset() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    d12.soft_reset().expect("Soft reset should not panic");
+    d12.soft_reset().await.expect("Soft reset should not panic");
     i2c.done();
 }
 
 // STATUS Register
-#[test]
-fn read_alarm() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_alarm() {
     let expectations = [
         I2cTransaction::write_read(ADDR, vec![Register::STATUS as u8], vec![0x00, 0x00]),
         I2cTransaction::write_read(ADDR, vec![Register::STATUS as u8], vec![0x00, 0x01]),
@@ -337,11 +442,13 @@ fn read_alarm() {
 
     let alarm = d12
         .get_alarm_status()
+        .await
         .expect("Should not panic fetching alarm");
     assert_eq!(alarm, AlarmStatus::Normal);
 
     let alarm = d12
         .get_alarm_status()
+        .await
         .expect("Should not panic fetching alarm");
     assert_eq!(alarm, AlarmStatus::Alarm);
 
@@ -349,8 +456,12 @@ fn read_alarm() {
 }
 
 // DAC Register
-#[test]
-fn set_output_0() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_output_0() {
     let expectations = [I2cTransaction::write(
         ADDR,
         vec![Register::DACDATA as u8, 0x00, 0x00],
@@ -358,27 +469,34 @@ fn set_output_0() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
     d12.set_output_level(0 as u16)
+        .await
         .expect("Shouldn't panic on setting dac to 0 output");
 
     i2c.done();
 }
 
-#[test]
-fn set_output_max_err() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_output_max_err() {
     let expectations = [];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    assert_matches!(
-        d12.set_output_level(u16::MAX),
-        Err(dacx0501::DacError::ValueOverflow)
-    );
+    let res = d12.set_output_level(u16::MAX).await;
+    assert!(matches!(res, Err(dacx0501::DacError::ValueOverflow)));
 
     i2c.done();
 }
 
-#[test]
-fn set_output_max() {
+#[maybe_async_cfg::maybe(
+    idents(Dac80501(sync, async = "AsyncDac80501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_output_max() {
     let expectations = [I2cTransaction::write(
         ADDR,
         vec![Register::DACDATA as u8, 0xFF, 0xFF],
@@ -386,13 +504,18 @@ fn set_output_max() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d16 = dacx0501::Dac80501::new_i2c(&mut i2c, ADDR);
 
-    assert_matches!(d16.set_output_level(u16::MAX), Ok(()));
+    let res = d16.set_output_level(u16::MAX).await;
+    assert!(matches!(res, Ok(())));
 
     i2c.done();
 }
 
-#[test]
-fn set_output_mid_scale() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn set_output_mid_scale() {
     let expectations = [I2cTransaction::write(
         ADDR,
         vec![Register::DACDATA as u8, 0x80, 0x00],
@@ -401,13 +524,18 @@ fn set_output_mid_scale() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     d12.set_output_level(2048)
+        .await
         .expect("Setting to mid scale should not panic");
 
     i2c.done();
 }
 
-#[test]
-fn read_output_level_12() {
+#[maybe_async_cfg::maybe(
+    idents(Dac60501(sync, async = "AsyncDac60501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_output_level_12() {
     let expectations = [I2cTransaction::write_read(
         ADDR,
         vec![Register::DACDATA as u8],
@@ -418,14 +546,19 @@ fn read_output_level_12() {
 
     let level = d12
         .get_output_level()
+        .await
         .expect("Should not panic fetching output level");
     assert_eq!(level, 2048);
 
     i2c.done();
 }
 
-#[test]
-fn read_output_level_16() {
+#[maybe_async_cfg::maybe(
+    idents(Dac80501(sync, async = "AsyncDac80501")),
+    sync(feature = "sync", inner(test)),
+    async(feature = "async", inner(tokio::test))
+)]
+async fn read_output_level_16() {
     let expectations = [I2cTransaction::write_read(
         ADDR,
         vec![Register::DACDATA as u8],
@@ -436,6 +569,7 @@ fn read_output_level_16() {
 
     let level = d16
         .get_output_level()
+        .await
         .expect("Should not panic fetching output level");
     assert_eq!(level, 32768);
 
