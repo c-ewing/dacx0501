@@ -12,7 +12,7 @@ This crate is an embedded-hal driver library implementation for the Texas Instru
  
 Both SPI and I2C are supported for all write operations (setting output level, power state, gain, reference divider, sync mode, and triggering loads/resets).
  
-Register **reads** (resolution, reset value, sync mode, internal reference, power state, reference divider, output gain, alarm status, and output level) are only available over **I2C**. The DAC80501/70501/60501 have no way to send data back to the host over SPI, so those methods simply don't exist on a `Dac` instance constructed with `new_spi`.
+Register **reads** (resolution, reset value, sync mode, internal reference, power state, reference divider, output gain, alarm status, and output level) are only available over **I2C**. The DAC80501/70501/60501 have no way to send data back to the host over **SPI**, so those methods don't exist on a `Dac` instance constructed with `new_spi`.
 
 
 ## Sync vs async

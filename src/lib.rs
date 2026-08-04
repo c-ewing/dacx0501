@@ -1,6 +1,4 @@
-//! This crate is an embedded-hal driver library implementation for the Texas Instruments 80501,
-//! 70501 and 60501 DACs. It relies on the embedded-hal 1.0.0 traits being implemented in
-//! the board hal. See the [product page](https://www.ti.com/product/DAC80501/part-details/DAC80501ZDQFT) for the datasheet and other notes.
+#![doc = include_str!("../README.md")]
 
 #![no_std]
 #![deny(missing_docs)]
@@ -114,7 +112,7 @@ pub enum Mode {
     /// Power on reset value: The DAC output updates as soon as a write to the DACDATA register completes
     #[default]
     Asynchronous = 0,
-    /// The DAC output does not update from the DACDATA register until it a [`set_load_dac()`] command is issued
+    /// The DAC output does not update from the DACDATA register until it a [`Dac80501::set_load_dac()`] command is issued
     Synchronous = 1,
 }
 
@@ -234,7 +232,7 @@ impl<I2C: I2c> Interface for I2cInterface<I2C> {
     }
 }
 
-/// Generic DAC. Use [`Dac80501`], [`Dac70501`] or [`Dac60501`] for the specific DACs rather than instantiating this directly
+/// Generic DAC. Use [`Dac80501`], [`Dac70501`] or [`Dac60501`] rather than instantiating this
 #[maybe_async_cfg::maybe(idents(Dac), sync(feature = "sync"), async(feature = "async"))]
 pub struct Dac<I, const BITS: u8> {
     interface: I,
