@@ -61,84 +61,84 @@ struct DacConfig {
     buffer_gain: BufferGain,
 }
 
-/// DAC power state. When powered down the DAC output is connected to ground through a 1k resistor.
-/// The device default is [`PowerState::On`]
+/// Power state of the device
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PowerState {
-    /// Normal operation
+    /// Power on reset value: Normal operation
     #[default]
     On = 0,
-    /// Power down, output connected to ground
+    /// Power down, output connected to ground through 1kOhm resistor
     Down = 1,
 }
 
-/// Output buffer gain.
-/// Power on value is [`BufferGain::Two`]
+/// Gain of the output buffer amplifier
+///
+/// [`BufferGain`], [`ReferenceDivider`], and the reference voltage control
+/// the full scale output range of the DAC. The full scale range is:
+/// `VOUT = VREF * BufferGain / ReferenceDivider`
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BufferGain {
-    /// The output voltage of the device is [0 .. VREF]
+    /// The output voltage is buffered but not amplified
     None = 0,
-    /// The output voltage of the device is [0 .. 2*VREF]
+    /// Power on reset value: Output is doubled and buffered
     #[default]
     Two = 1,
 }
-
-/// DAC reference divider which applies to both internal and external reference sources.
-/// Power on value is [`ReferenceDivider::None`]
+/// Controls the reference voltage division
+///
+/// [`BufferGain`], [`ReferenceDivider`], and the reference voltage control
+/// the full scale output range of the DAC. The full scale range is:
+/// `VOUT = VREF * BufferGain / ReferenceDivider`
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ReferenceDivider {
-    /// The reference voltage is not modified
+    /// Power on reset value: The reference voltage is not modified
     #[default]
     None = 0,
     /// The reference voltage is divided by 2
     Two = 1,
 }
 
-/// Status of the internal reference.
-/// Power on value is [`InternalReference::Enabled`]
+/// Power state of the internal reference
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum InternalReference {
-    /// The device internal reference is enabled
+    /// Power on reset value: The device internal reference is enabled
     #[default]
     Enabled = 0,
     /// The device internal reference is disabled. External reference must be provided.
     Disabled = 1,
 }
 
-/// Synchronous (triggered), or asynchronous (continuous) output of a value loaded into the DACDATA register.
-/// Synchronous output is triggered by writing to the LDAC bit of the trigger register.
-/// Power on value is [`Mode::Asynchronous`]
+/// Controls whether the DAC continuously updates, or has triggered updates
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Mode {
-    /// The device internal reference is enabled
+    /// Power on reset value: The DAC output updates as soon as a write to the DACDATA register completes
     #[default]
     Asynchronous = 0,
-    /// The device internal reference is disabled. External reference must be provided.
+    /// The DAC output does not update from the DACDATA register until it a [`set_load_dac()`] command is issued
     Synchronous = 1,
 }
 
-/// Reset value of the DAC output on power on reset.
+/// The power on reset output value of the DAC
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ResetValue {
-    /// DAC output is 0 volts
+    /// DAC output is 0 volts, DACx0501Z variants
     Zero = 0,
-    /// DAC output is mid scale
+    /// DAC output is mid scale, DACx0501M variants
     MidScale = 1,
 }
 
+/// Reference alarm state
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-/// Alarm when supply voltage is below what is required to power the internal reference and gain buffer. DAC outputs 0 volts while supply is too low.
-/// Upon supply exceeding the analog threshold DAC output returns to normal operation with the output code unaffected.
-/// Power on value is [`AlarmStatus::Normal`]
+
 pub enum AlarmStatus {
     /// Normal operation
     Normal = 0,
-    /// Not enough headroom, reference buffer shutdown. DAC outputs 0 volts.
+    /// Not enough supply headroom, reference buffer shutdown. DAC outputs 0 volts.
     Alarm = 1,
 }
 
-/// The custom error for this crate
 #[derive(Debug)]
+/// The custom error for this crate
 pub enum DacError<E> {
     /// The value for the specified DAC overflowed
     ValueOverflow,
@@ -292,7 +292,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         }
     }
 
-    /// Returns the power on reset value of the DAC
+    /// Returns the power on [`ResetValue`] of the DAC
     pub async fn get_reset_value(&mut self) -> Result<ResetValue, DacError<I2C::Error>> {
         let buf = self.read_register(Register::DEVID).await?;
         match buf[1] >> 7 {
@@ -302,64 +302,64 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         }
     }
 
-    /// Returns whether the device is in synchronous or asynchronous mode
+    /// Returns whether the device is in synchronous or asynchronous [`Mode`]
     pub async fn get_synchronous(&mut self) -> Result<Mode, DacError<I2C::Error>> {
         let buf = self.read_register(Register::SYNC).await?;
-        match buf[1] & 0b0000000_1 {
+        match buf[1] & 0b0000_0001 {
             0b0 => Ok(Mode::Asynchronous),
             0b1 => Ok(Mode::Synchronous),
             _ => Err(DacError::UnknownValue),
         }
     }
 
-    /// Returns the whether the internal reference is enabled or disabled
+    /// Returns the [`InternalReference`] state
     pub async fn get_internal_reference(
         &mut self,
     ) -> Result<InternalReference, DacError<I2C::Error>> {
         let buf = self.read_register(Register::CONFIG).await?;
-        match buf[0] & 0b0000000_1 {
+        match buf[0] & 0b0000_0001 {
             0b0 => Ok(InternalReference::Enabled),
             0b1 => Ok(InternalReference::Disabled),
             _ => Err(DacError::UnknownValue),
         }
     }
 
-    /// Returns the DAC power state, on or down
+    /// Returns the DAC [`PowerState`]
     pub async fn get_power_state(&mut self) -> Result<PowerState, DacError<I2C::Error>> {
         let buf = self.read_register(Register::CONFIG).await?;
-        match buf[1] & 0b0000000_1 {
+        match buf[1] & 0b0000_0001 {
             0b0 => Ok(PowerState::On),
             0b1 => Ok(PowerState::Down),
             _ => Err(DacError::UnknownValue),
         }
     }
 
-    /// Returns the status of the reference divider, either no reference division or divide by two
+    /// Returns the status of the [`ReferenceDivider`]
     pub async fn get_reference_divider(
         &mut self,
     ) -> Result<ReferenceDivider, DacError<I2C::Error>> {
         let buf = self.read_register(Register::GAIN).await?;
-        match buf[0] & 0b0000000_1 {
+        match buf[0] & 0b0000_0001 {
             0b0 => Ok(ReferenceDivider::None),
             0b1 => Ok(ReferenceDivider::Two),
             _ => Err(DacError::UnknownValue),
         }
     }
 
-    /// Returns the output buffer gain either no gain or two times gain
+    /// Returns the output [`BufferGain`]
     pub async fn get_output_gain(&mut self) -> Result<BufferGain, DacError<I2C::Error>> {
         let buf = self.read_register(Register::GAIN).await?;
-        match buf[1] & 0b0000000_1 {
+        match buf[1] & 0b0000_0001 {
             0b0 => Ok(BufferGain::None),
             0b1 => Ok(BufferGain::Two),
             _ => Err(DacError::UnknownValue),
         }
     }
 
-    /// Returns reference alarm status. Alarm occurs when supply is below what is required to output the maximum output voltage.
+    /// Returns reference [`AlarmStatus`]
     pub async fn get_alarm_status(&mut self) -> Result<AlarmStatus, DacError<I2C::Error>> {
         let buf = self.read_register(Register::STATUS).await?;
-        match buf[1] & 0b0000000_1 {
+        match buf[1] & 0b0000_0001 {
             0b0 => Ok(AlarmStatus::Normal),
             0b1 => Ok(AlarmStatus::Alarm),
             _ => Err(DacError::UnknownValue),
@@ -386,21 +386,21 @@ where
     /// regardless of the DAC resolution. 12 and 14 bit DACs left justify output code within output register.
     const REGISTER_WIDTH: u8 = 16;
 
-    /// Write to the NOOP register, has no effects
+    /// Write to the NOOP register, has no effect
     pub async fn set_noop(&mut self) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::NOOP, [0x00, 0x00])
             .await
     }
 
-    /// Set whether the DAC is triggered by load DAC or if it is set to update immediately
+    /// Set whether the DAC trigger [`Mode`]
     pub async fn set_synchronous(&mut self, mode: Mode) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::SYNC, [0x00, mode as u8])
             .await
     }
 
-    /// Enables and disables the device internal reference. The internal reference is on by default
+    /// Enables and disables the device [`InternalReference`]
     pub async fn set_internal_reference(
         &mut self,
         intern_ref: InternalReference,
@@ -415,9 +415,7 @@ where
         Ok(())
     }
 
-    /// In power-off state the device output is connected to GND through a 1-kΩ internal
-    /// resistor. The device is in power `On` state by default. This reduces current
-    /// consumption to typically 15 µA at 5 V.
+    /// Set the device [`PowerState`]
     pub async fn set_power_state(&mut self, state: PowerState) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::CONFIG, [self.config.ref_power as u8, state as u8])
@@ -426,16 +424,7 @@ where
         Ok(())
     }
 
-    /// The reference voltage to the device (either from the internal or external reference) can be
-    /// divided by a factor of two by setting the reference divider to `Half`. Make sure to configure
-    /// the reference divider so that there is sufficient headroom from VDD to the DAC operating
-    /// reference voltage. Improper configuration of the reference divider triggers a reference
-    /// alarm condition. In the case of an alarm condition, the reference buffer is shut down, and
-    /// all the DAC outputs go to 0 V. The DAC data registers are unaffected by the alarm
-    /// condition, and thus enable the DAC output to return to normal operation after the reference
-    /// divider is configured correctly. When the reference divider is set to `Half`, the reference
-    /// voltage is internally divided by a factor of 2. The reference divider is set to `OneX` by
-    /// default
+    /// Set the [`ReferenceDivider`]
     pub async fn set_reference_divider(
         &mut self,
         ref_div: ReferenceDivider,
@@ -450,10 +439,7 @@ where
         Ok(())
     }
 
-    /// When set to `TwoX`, the buffer amplifier for the DAC has a gain of 2x doubling the
-    /// voltage output. When set to `OneX` it has a gain of 1x. Using this gain can be
-    /// especially useful when using the internal reference divider set to `Half`. The
-    /// output gain is set to `TwoX` by default
+    /// Set the [`BufferGain`]
     pub async fn set_output_gain(&mut self, gain: BufferGain) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::GAIN, [self.config.ref_divider as u8, gain as u8])
@@ -465,7 +451,7 @@ where
     /// Trigger synchronous load. Self resetting after load is completed. No effect for asynchronous operation.
     pub async fn set_load_dac(&mut self) -> Result<(), DacError<I::Error>> {
         self.interface
-            .write_register(Register::TRIGGER, [0x00, 0b000_1_0000])
+            .write_register(Register::TRIGGER, [0x00, 0b0001_0000])
             .await
     }
 
@@ -478,7 +464,7 @@ where
         Ok(())
     }
 
-    /// Set the output voltage of the device and check the level bounds for the specified device
+    /// Set the output voltage of the device and check the bounds on number of bits
     pub async fn set_output_level(&mut self, level: u16) -> Result<(), DacError<I::Error>> {
         // Shifts to ensure level is not out of range for the number of bits the DAC has.
         // Check should be optimized out in the case of a 16bit DAC
@@ -492,8 +478,7 @@ where
             .await
     }
 
-    /// This function sets the output level without checking the bounds on the size of the
-    /// value for the specified DAC
+    /// Sets the output level without checking the number of bits being set
     pub async fn set_output_level_unchecked(
         &mut self,
         level: u16,
