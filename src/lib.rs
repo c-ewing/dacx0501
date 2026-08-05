@@ -117,7 +117,7 @@ pub enum UpdateMode {
     /// Power on reset value: The DAC output updates as soon as a write to the DACDATA register completes
     #[default]
     Asynchronous = 0,
-    /// The DAC output does not update from the DACDATA register until a [`Dac80501::set_load_dac()`] command is issued
+    /// The DAC output does not update from the DACDATA register until a [`Dac80501::load_dac()`] command is issued
     Synchronous = 1,
 }
 
@@ -318,7 +318,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         }
     }
 
-    /// Returns whether the device is in synchronous or asynchronous [`Mode`]
+    /// Returns whether the device is in synchronous or asynchronous [`UpdateMode`]
     pub async fn update_mode(&mut self) -> Result<UpdateMode, DacError<I2C::Error>> {
         let buf = self.read_register(Register::SYNC).await?;
         match buf[1] & 0b0000_0001 {
@@ -426,7 +426,7 @@ where
             .await
     }
 
-    /// Set whether the DAC trigger [`Mode`]
+    /// Set whether the DAC trigger [`UpdateMode`]
     pub async fn set_update_mode(&mut self, mode: UpdateMode) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::SYNC, [0x00, mode as u8])
