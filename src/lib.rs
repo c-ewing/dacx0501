@@ -124,9 +124,9 @@ pub enum UpdateMode {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum ResetValue {
-    /// DAC output is 0 volts, DACx0501Z variants
+    /// DAC output is 0 volts, `DACx0501Z` variants
     Zero = 0,
-    /// DAC output is mid scale, DACx0501M variants
+    /// DAC output is mid scale, `DACx0501M` variants
     MidScale = 1,
 }
 
@@ -155,7 +155,7 @@ impl<E: fmt::Debug> fmt::Display for DacError<E> {
         match self {
             Self::ValueOverflow => write!(f, "The data value was too large for the selected DAC"),
             Self::UnknownValue => write!(f, "Unknown value for register"),
-            Self::InterfaceError(e) => write!(f, "Interface error: {:?}", e),
+            Self::InterfaceError(e) => write!(f, "Interface error: {e:?}"),
         }
     }
 }
@@ -163,8 +163,7 @@ impl<E: fmt::Debug> fmt::Display for DacError<E> {
 impl<E: fmt::Debug + core::error::Error + 'static> core::error::Error for DacError<E> {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
-            Self::ValueOverflow => None,
-            Self::UnknownValue => None,
+            Self::ValueOverflow | Self::UnknownValue => None,
             Self::InterfaceError(e) => Some(e),
         }
     }
@@ -176,7 +175,7 @@ impl<E: fmt::Debug + core::error::Error + 'static> core::error::Error for DacErr
 #[allow(async_fn_in_trait)]
 #[maybe_async_cfg::maybe(idents(Interface), sync(feature = "sync"), async(feature = "async"))]
 pub trait Interface {
-    /// Error type, Either SpiError or I2cError
+    /// Error type
     type Error;
     /// Write to a register, data is ordered high:low
     async fn write_register(
@@ -256,7 +255,7 @@ impl<SPI: SpiDevice, const BITS: u8> Dac<SpiInterface<SPI>, BITS> {
             assert!(
                 BITS == 12 || BITS == 14 || BITS == 16,
                 "BITS must be 12, 14, or 16"
-            )
+            );
         };
         Self {
             interface: SpiInterface { spi },
@@ -278,7 +277,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
             assert!(
                 BITS == 12 || BITS == 14 || BITS == 16,
                 "BITS must be 12, 14, or 16"
-            )
+            );
         };
         Self {
             interface: I2cInterface { i2c, address },
@@ -503,7 +502,7 @@ where
     pub async fn set_output_level(&mut self, level: u16) -> Result<(), DacError<I::Error>> {
         // Shifts to ensure level is not out of range for the number of bits the DAC has.
         // Check should be optimized out in the case of a 16bit DAC
-        if level.checked_shr(BITS as u32).unwrap_or(0) != 0 {
+        if level.checked_shr(u32::from(BITS)).unwrap_or(0) != 0 {
             return Err(DacError::ValueOverflow);
         }
 
