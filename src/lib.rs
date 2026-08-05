@@ -78,7 +78,7 @@ pub enum PowerState {
 #[repr(u8)]
 pub enum BufferGain {
     /// The output voltage is buffered but not amplified
-    None = 0,
+    Unity = 0,
     /// Power on reset value: Output is doubled and buffered
     #[default]
     Two = 1,
@@ -95,7 +95,7 @@ pub enum ReferenceDivider {
     #[default]
     None = 0,
     /// The reference voltage is divided by 2
-    Two = 1,
+    Half = 1,
 }
 
 /// Power state of the internal reference
@@ -368,8 +368,8 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
                 Ok(ReferenceDivider::None)
             }
             0b1 => {
-                self.config.ref_divider = ReferenceDivider::Two;
-                Ok(ReferenceDivider::Two)
+                self.config.ref_divider = ReferenceDivider::Half;
+                Ok(ReferenceDivider::Half)
             }
             _ => Err(DacError::UnknownValue),
         }
@@ -380,8 +380,8 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
         let buf = self.read_register(Register::GAIN).await?;
         match buf[1] & 0b0000_0001 {
             0b0 => {
-                self.config.buffer_gain = BufferGain::None;
-                Ok(BufferGain::None)
+                self.config.buffer_gain = BufferGain::Unity;
+                Ok(BufferGain::Unity)
             }
             0b1 => {
                 self.config.buffer_gain = BufferGain::Two;

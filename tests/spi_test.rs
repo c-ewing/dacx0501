@@ -1,10 +1,10 @@
 use dacx0501;
 use dacx0501::BufferGain;
 use dacx0501::InternalReference;
-use dacx0501::UpdateMode;
 use dacx0501::PowerState;
 use dacx0501::ReferenceDivider;
 use dacx0501::Register;
+use dacx0501::UpdateMode;
 use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 
 #[maybe_async_cfg::maybe(
@@ -61,9 +61,7 @@ async fn set_noop() {
     let mut spi = SpiMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
-    d12.noop()
-        .await
-        .expect("Writing to noop should not panic");
+    d12.noop().await.expect("Writing to noop should not panic");
     spi.done();
 }
 
@@ -171,7 +169,7 @@ async fn set_reference_divider() {
         .await
         .expect("Shouldn't panic on changing reference divider");
 
-    d12.set_reference_divider(ReferenceDivider::Two)
+    d12.set_reference_divider(ReferenceDivider::Half)
         .await
         .expect("Shouldn't panic on changing reference divider");
 
@@ -195,7 +193,7 @@ async fn set_buffer_gain() {
     ];
     let mut spi = SpiMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
-    d12.set_output_gain(BufferGain::None)
+    d12.set_output_gain(BufferGain::Unity)
         .await
         .expect("Shouldn't panic on changing buffer gain");
 

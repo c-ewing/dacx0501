@@ -2,11 +2,11 @@ use dacx0501;
 use dacx0501::AlarmStatus;
 use dacx0501::BufferGain;
 use dacx0501::InternalReference;
-use dacx0501::UpdateMode;
 use dacx0501::PowerState;
 use dacx0501::ReferenceDivider;
 use dacx0501::Register;
 use dacx0501::ResetValue;
+use dacx0501::UpdateMode;
 use embedded_hal_mock::eh1::i2c::{Mock as I2cMock, Transaction as I2cTransaction};
 
 const ADDR: u8 = 0b1001_000;
@@ -64,9 +64,7 @@ async fn set_noop() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    d12.noop()
-        .await
-        .expect("Writing to noop should not panic");
+    d12.noop().await.expect("Writing to noop should not panic");
     i2c.done();
 }
 
@@ -306,7 +304,7 @@ async fn read_reference_divider() {
         .reference_divider()
         .await
         .expect("Should not panic getting reference divider");
-    assert_eq!(divider, ReferenceDivider::Two);
+    assert_eq!(divider, ReferenceDivider::Half);
 
     i2c.done();
 }
@@ -328,7 +326,7 @@ async fn set_reference_divider() {
         .await
         .expect("Shouldn't panic on changing reference divider");
 
-    d12.set_reference_divider(ReferenceDivider::Two)
+    d12.set_reference_divider(ReferenceDivider::Half)
         .await
         .expect("Shouldn't panic on changing reference divider");
 
@@ -352,7 +350,7 @@ async fn read_buffer_gain() {
         .output_gain()
         .await
         .expect("Shouldn't panic reading gain");
-    assert_eq!(gain, BufferGain::None);
+    assert_eq!(gain, BufferGain::Unity);
 
     let gain = d12
         .output_gain()
@@ -376,7 +374,7 @@ async fn set_buffer_gain() {
     ];
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
-    d12.set_output_gain(BufferGain::None)
+    d12.set_output_gain(BufferGain::Unity)
         .await
         .expect("Shouldn't panic on changing buffer gain");
 
