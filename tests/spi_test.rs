@@ -1,12 +1,10 @@
-use std::u16;
-
+use dacx0501;
 use dacx0501::BufferGain;
 use dacx0501::InternalReference;
-use dacx0501::Mode;
+use dacx0501::UpdateMode;
 use dacx0501::PowerState;
 use dacx0501::ReferenceDivider;
 use dacx0501::Register;
-use dacx0501::{self};
 use embedded_hal_mock::eh1::spi::{Mock as SpiMock, Transaction as SpiTransaction};
 
 #[maybe_async_cfg::maybe(
@@ -63,7 +61,7 @@ async fn set_noop() {
     let mut spi = SpiMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
-    d12.set_noop()
+    d12.noop()
         .await
         .expect("Writing to noop should not panic");
     spi.done();
@@ -87,10 +85,10 @@ async fn set_sync() {
     let mut spi = SpiMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
-    d12.set_synchronous(Mode::Asynchronous)
+    d12.set_update_mode(UpdateMode::Asynchronous)
         .await
         .expect("Should not panic setting async");
-    d12.set_synchronous(Mode::Synchronous)
+    d12.set_update_mode(UpdateMode::Synchronous)
         .await
         .expect("Should not panic setting sync");
     spi.done();
@@ -223,7 +221,7 @@ async fn set_load_dac() {
     let mut spi = SpiMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_spi(&mut spi);
 
-    d12.set_load_dac()
+    d12.load_dac()
         .await
         .expect("Triggering load should not panic");
     spi.done();

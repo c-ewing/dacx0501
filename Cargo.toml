@@ -2,9 +2,12 @@
 name = "dacx0501"
 version = "0.3.0"
 edition = "2021"
+rust-version = "1.81"
 authors = ["Jared Moulton <jaredmoulton3@gmail.com>", "Cameron Ewing <cameronramsayewing@gmail.com>"]
 license = "MIT"
-description = """An embedded-hal driver implementation for the x0501 family of DACs"""
+description = "An embedded-hal driver implementation for the x0501 family of DACs"
+keywords = ["embedded-hal", "dac", "driver", "no-std"]
+categories = ["embedded", "no-std"]
 homepage = "https://github.com/jrmoulton/dacx0501"
 repository = "https://github.com/jrmoulton/dacx0501"
 

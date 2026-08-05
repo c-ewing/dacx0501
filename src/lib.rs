@@ -61,6 +61,7 @@ struct DacConfig {
 
 /// Power state of the device
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
 pub enum PowerState {
     /// Power on reset value: Normal operation
     #[default]
@@ -75,6 +76,7 @@ pub enum PowerState {
 /// the full scale output range of the DAC. The full scale range is:
 /// `VOUT = VREF * BufferGain / ReferenceDivider`
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
 pub enum BufferGain {
     /// The output voltage is buffered but not amplified
     None = 0,
@@ -88,6 +90,7 @@ pub enum BufferGain {
 /// the full scale output range of the DAC. The full scale range is:
 /// `VOUT = VREF * BufferGain / ReferenceDivider`
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
 pub enum ReferenceDivider {
     /// Power on reset value: The reference voltage is not modified
     #[default]
@@ -98,6 +101,7 @@ pub enum ReferenceDivider {
 
 /// Power state of the internal reference
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
 pub enum InternalReference {
     /// Power on reset value: The device internal reference is enabled
     #[default]
@@ -108,16 +112,18 @@ pub enum InternalReference {
 
 /// Controls whether the DAC continuously updates, or has triggered updates
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Mode {
+#[repr(u8)]
+pub enum UpdateMode {
     /// Power on reset value: The DAC output updates as soon as a write to the DACDATA register completes
     #[default]
     Asynchronous = 0,
-    /// The DAC output does not update from the DACDATA register until it a [`Dac80501::set_load_dac()`] command is issued
+    /// The DAC output does not update from the DACDATA register until a [`Dac80501::set_load_dac()`] command is issued
     Synchronous = 1,
 }
 
 /// The power on reset output value of the DAC
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
 pub enum ResetValue {
     /// DAC output is 0 volts, DACx0501Z variants
     Zero = 0,
@@ -127,7 +133,7 @@ pub enum ResetValue {
 
 /// Reference alarm state
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-
+#[repr(u8)]
 pub enum AlarmStatus {
     /// Normal operation
     Normal = 0,
@@ -247,6 +253,12 @@ impl<SPI: SpiDevice, const BITS: u8> Dac<SpiInterface<SPI>, BITS> {
     /// Creates a new instance of the specified dac with the internal state set to match
     /// the device defaults using an SPI interface
     pub fn new_spi(spi: SPI) -> Self {
+        const {
+            assert!(
+                BITS == 12 || BITS == 14 || BITS == 16,
+                "BITS must be 12, 14, or 16"
+            )
+        };
         Self {
             interface: SpiInterface { spi },
             config: DacConfig::default(),
@@ -263,6 +275,12 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     /// Creates a new instance of the specified dac with the internal state set to match
     /// the device defaults using an I2C interface
     pub fn new_i2c(i2c: I2C, address: u8) -> Self {
+        const {
+            assert!(
+                BITS == 12 || BITS == 14 || BITS == 16,
+                "BITS must be 12, 14, or 16"
+            )
+        };
         Self {
             interface: I2cInterface { i2c, address },
             config: DacConfig::default(),
@@ -280,7 +298,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the resolution of the device in bits
-    pub async fn get_resolution(&mut self) -> Result<u8, DacError<I2C::Error>> {
+    pub async fn resolution(&mut self) -> Result<u8, DacError<I2C::Error>> {
         let buf = self.read_register(Register::DEVID).await?;
         match buf[0] >> 4 {
             0b000 => Ok(16),
@@ -291,7 +309,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the power on [`ResetValue`] of the DAC
-    pub async fn get_reset_value(&mut self) -> Result<ResetValue, DacError<I2C::Error>> {
+    pub async fn reset_value(&mut self) -> Result<ResetValue, DacError<I2C::Error>> {
         let buf = self.read_register(Register::DEVID).await?;
         match buf[1] >> 7 {
             0b00 => Ok(ResetValue::Zero),
@@ -301,61 +319,78 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns whether the device is in synchronous or asynchronous [`Mode`]
-    pub async fn get_synchronous(&mut self) -> Result<Mode, DacError<I2C::Error>> {
+    pub async fn update_mode(&mut self) -> Result<UpdateMode, DacError<I2C::Error>> {
         let buf = self.read_register(Register::SYNC).await?;
         match buf[1] & 0b0000_0001 {
-            0b0 => Ok(Mode::Asynchronous),
-            0b1 => Ok(Mode::Synchronous),
+            0b0 => Ok(UpdateMode::Asynchronous),
+            0b1 => Ok(UpdateMode::Synchronous),
             _ => Err(DacError::UnknownValue),
         }
     }
 
     /// Returns the [`InternalReference`] state
-    pub async fn get_internal_reference(
-        &mut self,
-    ) -> Result<InternalReference, DacError<I2C::Error>> {
+    pub async fn internal_reference(&mut self) -> Result<InternalReference, DacError<I2C::Error>> {
         let buf = self.read_register(Register::CONFIG).await?;
         match buf[0] & 0b0000_0001 {
-            0b0 => Ok(InternalReference::Enabled),
-            0b1 => Ok(InternalReference::Disabled),
+            0b0 => {
+                self.config.ref_power = InternalReference::Enabled;
+                Ok(InternalReference::Enabled)
+            }
+            0b1 => {
+                self.config.ref_power = InternalReference::Enabled;
+                Ok(InternalReference::Disabled)
+            }
             _ => Err(DacError::UnknownValue),
         }
     }
 
     /// Returns the DAC [`PowerState`]
-    pub async fn get_power_state(&mut self) -> Result<PowerState, DacError<I2C::Error>> {
+    pub async fn power_state(&mut self) -> Result<PowerState, DacError<I2C::Error>> {
         let buf = self.read_register(Register::CONFIG).await?;
         match buf[1] & 0b0000_0001 {
-            0b0 => Ok(PowerState::On),
-            0b1 => Ok(PowerState::Down),
+            0b0 => {
+                self.config.dac_power = PowerState::On;
+                Ok(PowerState::On)
+            }
+            0b1 => {
+                self.config.dac_power = PowerState::Down;
+                Ok(PowerState::Down)
+            }
             _ => Err(DacError::UnknownValue),
         }
     }
 
     /// Returns the status of the [`ReferenceDivider`]
-    pub async fn get_reference_divider(
-        &mut self,
-    ) -> Result<ReferenceDivider, DacError<I2C::Error>> {
+    pub async fn reference_divider(&mut self) -> Result<ReferenceDivider, DacError<I2C::Error>> {
         let buf = self.read_register(Register::GAIN).await?;
         match buf[0] & 0b0000_0001 {
             0b0 => Ok(ReferenceDivider::None),
-            0b1 => Ok(ReferenceDivider::Two),
+            0b1 => {
+                self.config.ref_divider = ReferenceDivider::Two;
+                Ok(ReferenceDivider::Two)
+            }
             _ => Err(DacError::UnknownValue),
         }
     }
 
     /// Returns the output [`BufferGain`]
-    pub async fn get_output_gain(&mut self) -> Result<BufferGain, DacError<I2C::Error>> {
+    pub async fn output_gain(&mut self) -> Result<BufferGain, DacError<I2C::Error>> {
         let buf = self.read_register(Register::GAIN).await?;
         match buf[1] & 0b0000_0001 {
-            0b0 => Ok(BufferGain::None),
-            0b1 => Ok(BufferGain::Two),
+            0b0 => {
+                self.config.buffer_gain = BufferGain::None;
+                Ok(BufferGain::None)
+            }
+            0b1 => {
+                self.config.buffer_gain = BufferGain::Two;
+                Ok(BufferGain::Two)
+            }
             _ => Err(DacError::UnknownValue),
         }
     }
 
     /// Returns reference [`AlarmStatus`]
-    pub async fn get_alarm_status(&mut self) -> Result<AlarmStatus, DacError<I2C::Error>> {
+    pub async fn alarm_status(&mut self) -> Result<AlarmStatus, DacError<I2C::Error>> {
         let buf = self.read_register(Register::STATUS).await?;
         match buf[1] & 0b0000_0001 {
             0b0 => Ok(AlarmStatus::Normal),
@@ -365,7 +400,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     }
 
     /// Returns the current output level of the DAC
-    pub async fn get_output_level(&mut self) -> Result<u16, DacError<I2C::Error>> {
+    pub async fn output_level(&mut self) -> Result<u16, DacError<I2C::Error>> {
         let buf = self.read_register(Register::DACDATA).await?;
         Ok(u16::from_be_bytes(buf) >> (Self::REGISTER_WIDTH - BITS))
     }
@@ -385,14 +420,14 @@ where
     const REGISTER_WIDTH: u8 = 16;
 
     /// Write to the NOOP register, has no effect
-    pub async fn set_noop(&mut self) -> Result<(), DacError<I::Error>> {
+    pub async fn noop(&mut self) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::NOOP, [0x00, 0x00])
             .await
     }
 
     /// Set whether the DAC trigger [`Mode`]
-    pub async fn set_synchronous(&mut self, mode: Mode) -> Result<(), DacError<I::Error>> {
+    pub async fn set_update_mode(&mut self, mode: UpdateMode) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::SYNC, [0x00, mode as u8])
             .await
@@ -447,7 +482,7 @@ where
     }
 
     /// Trigger synchronous load. Self resetting after load is completed. No effect for asynchronous operation.
-    pub async fn set_load_dac(&mut self) -> Result<(), DacError<I::Error>> {
+    pub async fn load_dac(&mut self) -> Result<(), DacError<I::Error>> {
         self.interface
             .write_register(Register::TRIGGER, [0x00, 0b0001_0000])
             .await

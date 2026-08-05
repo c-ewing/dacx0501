@@ -1,14 +1,12 @@
-use std::u16;
-
+use dacx0501;
 use dacx0501::AlarmStatus;
 use dacx0501::BufferGain;
 use dacx0501::InternalReference;
-use dacx0501::Mode;
+use dacx0501::UpdateMode;
 use dacx0501::PowerState;
 use dacx0501::ReferenceDivider;
 use dacx0501::Register;
 use dacx0501::ResetValue;
-use dacx0501::{self};
 use embedded_hal_mock::eh1::i2c::{Mock as I2cMock, Transaction as I2cTransaction};
 
 const ADDR: u8 = 0b1001_000;
@@ -66,7 +64,7 @@ async fn set_noop() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    d12.set_noop()
+    d12.noop()
         .await
         .expect("Writing to noop should not panic");
     i2c.done();
@@ -88,19 +86,19 @@ async fn read_resolution() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let r = d12
-        .get_resolution()
+        .resolution()
         .await
         .expect("Reading resolution should not panic");
     assert_eq!(r, 16);
 
     let r = d12
-        .get_resolution()
+        .resolution()
         .await
         .expect("Reading resolution should not panic");
     assert_eq!(r, 14);
 
     let r = d12
-        .get_resolution()
+        .resolution()
         .await
         .expect("Reading resolution should not panic");
     assert_eq!(r, 12);
@@ -122,13 +120,13 @@ async fn read_reset_value() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let reset = d12
-        .get_reset_value()
+        .reset_value()
         .await
         .expect("Reading reset value should not panic");
     assert_eq!(reset, ResetValue::Zero);
 
     let reset = d12
-        .get_reset_value()
+        .reset_value()
         .await
         .expect("Reading reset value should not panic");
     assert_eq!(reset, ResetValue::MidScale);
@@ -150,11 +148,11 @@ async fn read_sync() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    let sync = d12.get_synchronous().await.expect("Should not panic");
-    assert_eq!(sync, Mode::Asynchronous);
+    let sync = d12.update_mode().await.expect("Should not panic");
+    assert_eq!(sync, UpdateMode::Asynchronous);
 
-    let sync = d12.get_synchronous().await.expect("Should not panic");
-    assert_eq!(sync, Mode::Synchronous);
+    let sync = d12.update_mode().await.expect("Should not panic");
+    assert_eq!(sync, UpdateMode::Synchronous);
 
     i2c.done();
 }
@@ -172,10 +170,10 @@ async fn set_sync() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    d12.set_synchronous(Mode::Asynchronous)
+    d12.set_update_mode(UpdateMode::Asynchronous)
         .await
         .expect("Should not panic setting async");
-    d12.set_synchronous(Mode::Synchronous)
+    d12.set_update_mode(UpdateMode::Synchronous)
         .await
         .expect("Should not panic setting sync");
     i2c.done();
@@ -196,13 +194,13 @@ async fn read_reference() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let reference = d12
-        .get_internal_reference()
+        .internal_reference()
         .await
         .expect("Reading power should not panic");
     assert_eq!(reference, InternalReference::Enabled);
 
     let reference = d12
-        .get_internal_reference()
+        .internal_reference()
         .await
         .expect("Reading power should not panic");
     assert_eq!(reference, InternalReference::Disabled);
@@ -247,13 +245,13 @@ async fn read_power_state() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let power = d12
-        .get_power_state()
+        .power_state()
         .await
         .expect("Reading power should not panic");
     assert_eq!(power, PowerState::On);
 
     let power = d12
-        .get_power_state()
+        .power_state()
         .await
         .expect("Reading power should not panic");
     assert_eq!(power, PowerState::Down);
@@ -299,13 +297,13 @@ async fn read_reference_divider() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let divider = d12
-        .get_reference_divider()
+        .reference_divider()
         .await
         .expect("Should not panic getting reference divider");
     assert_eq!(divider, ReferenceDivider::None);
 
     let divider = d12
-        .get_reference_divider()
+        .reference_divider()
         .await
         .expect("Should not panic getting reference divider");
     assert_eq!(divider, ReferenceDivider::Two);
@@ -351,13 +349,13 @@ async fn read_buffer_gain() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let gain = d12
-        .get_output_gain()
+        .output_gain()
         .await
         .expect("Shouldn't panic reading gain");
     assert_eq!(gain, BufferGain::None);
 
     let gain = d12
-        .get_output_gain()
+        .output_gain()
         .await
         .expect("Shouldn't panic reading gain");
     assert_eq!(gain, BufferGain::Two);
@@ -403,7 +401,7 @@ async fn set_load_dac() {
     let mut i2c = I2cMock::new(&expectations);
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
-    d12.set_load_dac()
+    d12.load_dac()
         .await
         .expect("Triggering load should not panic");
     i2c.done();
@@ -441,13 +439,13 @@ async fn read_alarm() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let alarm = d12
-        .get_alarm_status()
+        .alarm_status()
         .await
         .expect("Should not panic fetching alarm");
     assert_eq!(alarm, AlarmStatus::Normal);
 
     let alarm = d12
-        .get_alarm_status()
+        .alarm_status()
         .await
         .expect("Should not panic fetching alarm");
     assert_eq!(alarm, AlarmStatus::Alarm);
@@ -545,7 +543,7 @@ async fn read_output_level_12() {
     let mut d12 = dacx0501::Dac60501::new_i2c(&mut i2c, ADDR);
 
     let level = d12
-        .get_output_level()
+        .output_level()
         .await
         .expect("Should not panic fetching output level");
     assert_eq!(level, 2048);
@@ -568,7 +566,7 @@ async fn read_output_level_16() {
     let mut d16 = dacx0501::Dac80501::new_i2c(&mut i2c, ADDR);
 
     let level = d16
-        .get_output_level()
+        .output_level()
         .await
         .expect("Should not panic fetching output level");
     assert_eq!(level, 32768);
