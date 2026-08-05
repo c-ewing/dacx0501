@@ -1,5 +1,4 @@
 #![doc = include_str!("../README.md")]
-
 #![no_std]
 #![deny(missing_docs)]
 #![doc(
@@ -337,7 +336,7 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
                 Ok(InternalReference::Enabled)
             }
             0b1 => {
-                self.config.ref_power = InternalReference::Enabled;
+                self.config.ref_power = InternalReference::Disabled;
                 Ok(InternalReference::Disabled)
             }
             _ => Err(DacError::UnknownValue),
@@ -364,7 +363,10 @@ impl<I2C: I2c, const BITS: u8> Dac<I2cInterface<I2C>, BITS> {
     pub async fn reference_divider(&mut self) -> Result<ReferenceDivider, DacError<I2C::Error>> {
         let buf = self.read_register(Register::GAIN).await?;
         match buf[0] & 0b0000_0001 {
-            0b0 => Ok(ReferenceDivider::None),
+            0b0 => {
+                self.config.ref_divider = ReferenceDivider::None;
+                Ok(ReferenceDivider::None)
+            }
             0b1 => {
                 self.config.ref_divider = ReferenceDivider::Two;
                 Ok(ReferenceDivider::Two)
