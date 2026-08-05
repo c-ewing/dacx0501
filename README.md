@@ -35,7 +35,7 @@ dacx0501 = { version = "0.2", default-features = false, features = ["async"] }
  
 ### Blocking, SPI
  
-```rust
+```rust,ignore
 use dacx0501::{Dac80501, Dac60501, PowerState, ReferenceDivider, BufferGain};
  
 let mut dac_one = Dac80501::new_spi(spi_one);
@@ -44,7 +44,7 @@ let mut dac_two = Dac60501::new_spi(spi_two);
 // dac_one's output is now pulled to ground
 dac_one.set_power_state(PowerState::Down).unwrap();
  
-dac_two.set_reference_divider(ReferenceDivider::Two).unwrap();
+dac_two.set_reference_divider(ReferenceDivider::Half).unwrap();
 dac_two.set_output_gain(BufferGain::Two).unwrap();
  
 dac_two.set_output_level(2048).unwrap();
@@ -54,7 +54,7 @@ dac_two.set_output_level(2048).unwrap();
  
 I2C supports reading back from the device:
  
-```rust
+```rust,ignore
 use dacx0501::Dac60501;
  
 const ADDR: u8 = 0x48;
@@ -67,7 +67,7 @@ let resolution = dac.get_resolution().unwrap();
  
 ### Async, SPI (requires the `async` feature)
  
-```rust
+```rust,ignore
 use dacx0501::AsyncDac70501;
  
 let mut dac = AsyncDac70501::new_spi(spi);
@@ -76,7 +76,7 @@ dac.set_output_level(8192).await.unwrap();
  
 ### Async, I2C (requires the `async` feature)
  
-```rust
+```rust,ignore
 use dacx0501::AsyncDac80501;
  
 const ADDR: u8 = 0x48;
